@@ -194,15 +194,7 @@ export function ApplicationSuccess({
                   Decline
                 </Button>
               </div>
-              <p className="text-xs text-gray-500">
-                You can also confirm from your{" "}
-                <span
-                  className="text-indigo-600 underline cursor-pointer"
-                  onClick={() => router.push("/history")}
-                >
-                  Application History
-                </span>
-              </p>
+              
             </div>
           )}
 
