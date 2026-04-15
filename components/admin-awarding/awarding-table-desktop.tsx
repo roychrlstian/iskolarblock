@@ -9,7 +9,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -154,6 +153,8 @@ export function AwardingTableDesktop({
                             <p className="font-medium">
                               {currentStatus === "GRANTED"
                                 ? "Granted"
+                                : currentStatus === "PENDING_GRANT"
+                                ? "Awaiting Confirmation"
                                 : "Pending"}
                             </p>
                           </div>
@@ -167,7 +168,7 @@ export function AwardingTableDesktop({
                       </div>
                     </DialogContent>
                   </Dialog>
-                  {canModifyAwards && currentStatus !== "GRANTED" ? (
+                  {canModifyAwards && currentStatus !== "GRANTED" && currentStatus !== "PENDING_GRANT" ? (
                     <>
                       <Button
                         variant="ghost"

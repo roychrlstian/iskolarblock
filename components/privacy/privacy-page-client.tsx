@@ -10,7 +10,6 @@ import {
   UserCheck,
   AlertCircle,
   Mail,
-  Phone,
   Menu,
   X,
 } from "lucide-react";

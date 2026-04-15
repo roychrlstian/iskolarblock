@@ -2,14 +2,14 @@ export const mockUser = {
   id: '1',
   name: 'Juan Dela Cruz',
   email: 'juan@example.com',
-  role: 'user' as const,
+  role: 'USER' as const,
 }
 
 export const mockAdmin = {
   id: 'admin1',
   name: 'Admin User',
   email: 'admin@scholarblock.com',
-  role: 'admin' as const,
+  role: 'ADMIN' as const,
 }
 
 export const mockApplications = [

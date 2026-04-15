@@ -90,11 +90,11 @@ export default function NewApplicationPage() {
   const [cogOcrText, setCogOcrText] = useState<string>("");
   const [cogExtractedData, setCogExtractedData] =
     useState<COGExtractionResponse | null>(null);
-  const [cogFileUrl, setCogFileUrl] = useState<string>("");
+  const [_cogFileUrl, setCogFileUrl] = useState<string>("");
   const [corOcrText, setCorOcrText] = useState<string>("");
   const [corExtractedData, setCorExtractedData] =
     useState<CORExtractionResponse | null>(null);
-  const [corFileUrl, setCorFileUrl] = useState<string>("");
+  const [_corFileUrl, setCorFileUrl] = useState<string>("");
   const [submittedApplicationId, setSubmittedApplicationId] = useState<
     string | null
   >(null);
@@ -451,10 +451,8 @@ export default function NewApplicationPage() {
     });
 
   const onSubmit = async (data: NewApplicationFormData): Promise<void> => {
-    console.log("🚀 onSubmit called with data:", data);
     try {
       setIsSubmitting(true);
-      console.log("📝 Starting submission process...");
 
       // Convert ID file to base64
       let idImageBase64 = "";
@@ -467,7 +465,6 @@ export default function NewApplicationPage() {
       let cogFileUrl: string | null = null;
       if (certificateOfGrades) {
         try {
-          console.log("📤 Uploading COG file to Supabase...");
           const { uploadFileToSupabase } = await import(
             "@/lib/utils/file-upload"
           );
@@ -491,18 +488,13 @@ export default function NewApplicationPage() {
                   undefined,
                   "cog"
                 );
-                console.log("✅ COG uploaded to Supabase:", cogFileUrl);
               } catch (uploadError) {
-                console.warn("⚠️ Supabase upload failed, falling back to base64:", uploadError);
                 cogFileBase64 = await readFileAsBase64(certificateOfGrades);
-                console.log("✅ COG converted to base64 (fallback)");
               }
             } else {
-              console.warn("⚠️ User data not found, falling back to base64");
               cogFileBase64 = await readFileAsBase64(certificateOfGrades);
             }
           } else {
-            console.warn("⚠️ User not authenticated, falling back to base64");
             cogFileBase64 = await readFileAsBase64(certificateOfGrades);
           }
         } catch (error) {
@@ -518,7 +510,6 @@ export default function NewApplicationPage() {
       let corFileUrl: string | null = null;
       if (certificateOfRegistration) {
         try {
-          console.log("📤 Uploading COR file to Supabase...");
           const { uploadFileToSupabase } = await import(
             "@/lib/utils/file-upload"
           );
@@ -542,18 +533,13 @@ export default function NewApplicationPage() {
                   undefined,
                   "cor"
                 );
-                console.log("✅ COR uploaded to Supabase:", corFileUrl);
               } catch (uploadError) {
-                console.warn("⚠️ Supabase upload failed, falling back to base64:", uploadError);
                 corFileBase64 = await readFileAsBase64(certificateOfRegistration);
-                console.log("✅ COR converted to base64 (fallback)");
               }
             } else {
-              console.warn("⚠️ User data not found, falling back to base64");
               corFileBase64 = await readFileAsBase64(certificateOfRegistration);
             }
           } else {
-            console.warn("⚠️ User not authenticated, falling back to base64");
             corFileBase64 = await readFileAsBase64(certificateOfRegistration);
           }
         } catch (error) {
@@ -605,7 +591,6 @@ export default function NewApplicationPage() {
         corFileName: certificateOfRegistration?.name ?? null,
       };
 
-      console.log("📤 Sending application to server...");
       const response = await fetch("/api/applications/submit", {
         method: "POST",
         headers: {
@@ -613,8 +598,6 @@ export default function NewApplicationPage() {
         },
         body: JSON.stringify(submissionData),
       });
-
-      console.log("📥 Response status:", response.status);
 
       if (!response.ok) {
         // Handle 413 errors (Content Too Large) - Vercel returns plain text, not JSON
@@ -857,11 +840,7 @@ export default function NewApplicationPage() {
 
               <Button
                 onClick={async (e) => {
-                  console.log("🔘 Button clicked, step:", currentStep);
                   if (currentStep === newApplicationSteps.length) {
-                    console.log("📤 Submitting form...");
-                    console.log("Form errors:", errors);
-                    console.log("Form values:", watch());
                     await handleSubmit(onSubmit, handleValidationErrors)(e);
                   } else {
                     const stepFields = stepFieldErrorMap[currentStep];

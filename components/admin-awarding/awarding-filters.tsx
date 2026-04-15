@@ -89,6 +89,18 @@ export function AwardingFilters({
               Pending
             </Button>
             <Button
+              variant={statusFilters.has("PENDING_GRANT") ? "default" : "outline"}
+              size="sm"
+              className={
+                statusFilters.has("PENDING_GRANT")
+                  ? "bg-indigo-500 hover:bg-indigo-600 text-white"
+                  : undefined
+              }
+              onClick={() => onStatusFilterToggle("PENDING_GRANT")}
+            >
+              Awaiting Confirmation
+            </Button>
+            <Button
               variant={statusFilters.has("GRANTED") ? "default" : "outline"}
               size="sm"
               className={

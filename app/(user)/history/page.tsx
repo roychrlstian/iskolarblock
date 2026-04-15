@@ -28,6 +28,7 @@ interface Application {
 
 const statusColors = {
   APPROVED: "bg-green-100 text-green-700",
+  PENDING_GRANT: "bg-indigo-100 text-indigo-700",
   GRANTED: "bg-purple-100 text-purple-700",
   PENDING: "bg-orange-100 text-orange-700",
   REJECTED: "bg-red-100 text-red-700",

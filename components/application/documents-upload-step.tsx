@@ -1,6 +1,6 @@
 "use client";
 
-import { Upload, CheckCircle2, AlertCircle, XCircle } from "lucide-react";
+import { Upload, CheckCircle2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Card,
@@ -107,6 +107,7 @@ export function DocumentsUploadStep<
 }: DocumentsUploadStepProps<T>): React.JSX.Element {
   const { user } = useSession();
   // Certificate of Grades state
+  const [cogOcrConfidence, setCogOcrConfidence] = useState<number>(0);
   const [_cogOcrText, setCogOcrText] = useState<string>("");
   const [cogOcrError, setCogOcrError] = useState<string>("");
   const [isCogInvalidFileType, setIsCogInvalidFileType] =
@@ -120,6 +121,7 @@ export function DocumentsUploadStep<
     useState<COGExtractionResponse | null>(null);
 
   // Certificate of Registration state
+  const [corOcrConfidence, setCorOcrConfidence] = useState<number>(0);
   const [_corOcrText, setCorOcrText] = useState<string>("");
   const [corOcrError, setCorOcrError] = useState<string>("");
   const [isCorInvalidFileType, setIsCorInvalidFileType] =
@@ -151,8 +153,6 @@ export function DocumentsUploadStep<
   const hasProcessingErrors = hasCogProcessingError || hasCorProcessingError;
   const bothFilesUploaded = certificateOfGrades && certificateOfRegistration;
   const bothProcessingDone = isCogProcessingDone && isCorProcessingDone;
-  const missingDocuments = !certificateOfGrades || !certificateOfRegistration;
-
   // Process Certificate of Grades
   useEffect(() => {
     let cancelled = false;
@@ -232,6 +232,7 @@ export function DocumentsUploadStep<
       }
 
       setCogOcrText(result.text);
+      setCogOcrConfidence(result.confidence);
       onCogOcrChange?.(result.text, null);
       setCogProgress(80);
 
@@ -243,7 +244,8 @@ export function DocumentsUploadStep<
             result.text,
             certificateOfGrades,
             user?.id,
-            applicantName || undefined
+            applicantName || undefined,
+            result.confidence
           );
 
           if (cancelled) return;
@@ -422,6 +424,7 @@ export function DocumentsUploadStep<
       }
 
       setCorOcrText(result.text);
+      setCorOcrConfidence(result.confidence);
       onCorOcrChange?.(result.text, null);
       setCorProgress(80);
 
@@ -433,7 +436,8 @@ export function DocumentsUploadStep<
             result.text,
             certificateOfRegistration,
             user?.id,
-            applicantName || undefined
+            applicantName || undefined,
+            result.confidence
           );
 
           if (cancelled) return;
@@ -658,9 +662,24 @@ export function DocumentsUploadStep<
               <div className="flex items-start">
                 <CheckCircle2 className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-green-800">
-                    Certificate of Grades processed successfully
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-green-800">
+                      Certificate of Grades processed successfully
+                    </p>
+                    {cogOcrConfidence > 0 && (
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                          cogOcrConfidence >= 80
+                            ? "bg-green-100 text-green-800"
+                            : cogOcrConfidence >= 50
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        OCR: {cogOcrConfidence}%
+                      </span>
+                    )}
+                  </div>
                   <div className="mt-2 text-xs text-green-700 space-y-1">
                     {cogExtractedData.name && (
                       <p>• Student: {cogExtractedData.name}</p>
@@ -759,9 +778,24 @@ export function DocumentsUploadStep<
               <div className="flex items-start">
                 <CheckCircle2 className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-green-800">
-                    Certificate of Registration processed successfully
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-green-800">
+                      Certificate of Registration processed successfully
+                    </p>
+                    {corOcrConfidence > 0 && (
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                          corOcrConfidence >= 80
+                            ? "bg-green-100 text-green-800"
+                            : corOcrConfidence >= 50
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        OCR: {corOcrConfidence}%
+                      </span>
+                    )}
+                  </div>
                   <div className="mt-2 text-xs text-green-700 space-y-1">
                     {corExtractedData.name && (
                       <p>• Student: {corExtractedData.name}</p>

@@ -19,6 +19,7 @@ export function RecentApplications({
 }: RecentApplicationsProps): React.JSX.Element {
   const statusClassMap: Record<string, string> = {
     APPROVED: "bg-green-100 text-green-700 px-3 py-1",
+    PENDING_GRANT: "bg-indigo-100 text-indigo-700 px-3 py-1",
     GRANTED: "bg-purple-100 text-purple-700 px-3 py-1",
     PENDING: "bg-orange-100 text-orange-700 px-3 py-1",
     REJECTED: "bg-red-100 text-red-700 px-3 py-1",
@@ -55,7 +56,9 @@ export function RecentApplications({
                   <p className="text-sm text-gray-500 mt-1">{application.date}</p>
                 </div>
                 <Badge variant="outline" className={getStatusClass(application.status)}>
-                  {application.status === "GRANTED" ? "GRANTED" : application.status}
+                  {application.status === "PENDING_GRANT"
+                    ? "AWAITING CONFIRMATION"
+                    : application.status}
                 </Badge>
               </div>
             ))}

@@ -143,7 +143,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 }
 
-export async function GET(request: Request, context: RouteContext) {
+export async function GET(_request: Request, context: RouteContext) {
   try {
     // Verify admin user using database role check
     try {

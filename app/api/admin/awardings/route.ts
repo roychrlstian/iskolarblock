@@ -33,7 +33,7 @@ export async function GET(request: Request) {
       `
     );
 
-    query = query.in("status", ["APPROVED", "GRANTED"]);
+    query = query.in("status", ["APPROVED", "PENDING_GRANT", "GRANTED"]);
 
     if (periodId) {
       query = query.eq("applicationPeriodId", periodId);

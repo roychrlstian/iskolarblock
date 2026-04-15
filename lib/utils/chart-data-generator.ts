@@ -21,172 +21,145 @@ interface ChartDataPoint {
   applications: number;
 }
 
-/**
- * Generates chart data based on the selected time filter
- */
+const MONTH_ORDER: Record<string, number> = {
+  Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
+  Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11,
+};
+
+function parseMonthLabel(label: string): number {
+  const parts = label.split(" ");
+  const monthAbbr = parts[0];
+  const year = parseInt(parts[1] || "0", 10);
+  const monthIndex = MONTH_ORDER[monthAbbr] ?? 0;
+  return year * 12 + monthIndex;
+}
+
+function groupByMonth(applications: Application[]): ChartDataPoint[] {
+  const monthMap = new Map<string, number>();
+  applications.forEach((app) => {
+    const date = new Date(app.createdAt);
+    const monthKey = date.toLocaleDateString("en-US", {
+      month: "short",
+      year: "numeric",
+    });
+    monthMap.set(monthKey, (monthMap.get(monthKey) || 0) + 1);
+  });
+
+  return Array.from(monthMap.entries())
+    .map(([month, count]) => ({ month, applications: count }))
+    .sort((a, b) => parseMonthLabel(a.month) - parseMonthLabel(b.month));
+}
+
 export function generateChartData(
   applications: Application[],
   periods: ApplicationPeriod[],
   selectedPeriodId: string | null,
   timeFilter: "all" | "monthly" | "weekly" | "daily"
 ): ChartDataPoint[] {
-  const chartDataPoints: ChartDataPoint[] = [];
-
   if (!applications || applications.length === 0) {
-    chartDataPoints.push({
-      month: "No Data",
-      applications: 0,
-    });
-    return chartDataPoints;
+    return [{ month: "No Data", applications: 0 }];
   }
 
-  if (timeFilter === "all") {
-    // Group by month for all time
-    const monthMap = new Map<string, number>();
-    applications.forEach((app) => {
-      const date = new Date(app.createdAt);
-      const monthKey = date.toLocaleDateString("en-US", {
-        month: "short",
-        year: "numeric",
-      });
-      monthMap.set(monthKey, (monthMap.get(monthKey) || 0) + 1);
-    });
+  if (timeFilter === "all" || timeFilter === "monthly") {
+    const result = groupByMonth(applications);
+    return result.length > 0 ? result : [{ month: "No Data", applications: 0 }];
+  }
 
-    const sortedData = Array.from(monthMap.entries())
-      .map(([month, count]) => ({ month, applications: count }))
-      .sort((a, b) => {
-        const dateA = new Date(a.month);
-        const dateB = new Date(b.month);
-        return dateA.getTime() - dateB.getTime();
-      });
-
-    chartDataPoints.push(...sortedData);
-  } else if (timeFilter === "monthly") {
-    // Group by month
-    const monthMap = new Map<string, number>();
-    applications.forEach((app) => {
-      const date = new Date(app.createdAt);
-      const monthKey = date.toLocaleDateString("en-US", {
-        month: "short",
-        year: "numeric",
-      });
-      monthMap.set(monthKey, (monthMap.get(monthKey) || 0) + 1);
-    });
-
-    const sortedData = Array.from(monthMap.entries())
-      .map(([month, count]) => ({ month, applications: count }))
-      .sort((a, b) => {
-        const dateA = new Date(a.month);
-        const dateB = new Date(b.month);
-        return dateA.getTime() - dateB.getTime();
-      });
-
-    chartDataPoints.push(...sortedData);
-  } else if (timeFilter === "weekly") {
-    // Group by week - only for current period
-    if (selectedPeriodId && periods.length > 0) {
-      const currentPeriod = periods.find((p) => p.id === selectedPeriodId);
-      if (currentPeriod) {
-        const periodStart = new Date(currentPeriod.startDate);
-        const periodEnd = new Date(currentPeriod.endDate);
-
-        let weekStart = new Date(periodStart);
-        let weekNumber = 1;
-
-        while (weekStart <= periodEnd) {
-          const weekEnd = new Date(weekStart);
-          weekEnd.setDate(weekEnd.getDate() + 6);
-          if (weekEnd > periodEnd) {
-            weekEnd.setTime(periodEnd.getTime());
-          }
-
-          const weekApps =
-            applications.filter((app) => {
-              const appDate = new Date(app.createdAt);
-              return appDate >= weekStart && appDate <= weekEnd;
-            }).length || 0;
-
-          const weekLabel = `Week ${weekNumber}`;
-
-          chartDataPoints.push({
-            month: weekLabel,
-            applications: weekApps,
-          });
-
-          weekStart = new Date(weekEnd);
-          weekStart.setDate(weekStart.getDate() + 1);
-          weekNumber++;
-        }
-      }
-    } else {
-      // If no period selected, show empty
-      chartDataPoints.push({
-        month: "No Period Selected",
-        applications: 0,
-      });
+  if (timeFilter === "weekly") {
+    if (!selectedPeriodId || periods.length === 0) {
+      return [{ month: "No Period Selected", applications: 0 }];
     }
-  } else if (timeFilter === "daily") {
-    // Group by day - only show dates where applications were made within the cycle
-    if (selectedPeriodId && periods.length > 0) {
-      const currentPeriod = periods.find((p) => p.id === selectedPeriodId);
-      if (currentPeriod) {
-        const periodStart = new Date(currentPeriod.startDate);
-        const periodEnd = new Date(currentPeriod.endDate);
-        periodStart.setHours(0, 0, 0, 0);
-        periodEnd.setHours(23, 59, 59, 999);
 
-        // Only create entries for days that have applications
-        const dayMap = new Map<string, number>();
+    const currentPeriod = periods.find((p) => p.id === selectedPeriodId);
+    if (!currentPeriod) {
+      return [{ month: "No Period Selected", applications: 0 }];
+    }
 
-        // Count applications for each day within the period
-        applications.forEach((app) => {
-          const date = new Date(app.createdAt);
-          date.setHours(0, 0, 0, 0);
+    const chartDataPoints: ChartDataPoint[] = [];
+    const periodStart = new Date(currentPeriod.startDate);
+    const periodEnd = new Date(currentPeriod.endDate);
 
-          // Only count if within the period
-          if (date >= periodStart && date <= periodEnd) {
-            const dayKey = date.toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-            });
-            dayMap.set(dayKey, (dayMap.get(dayKey) || 0) + 1);
-          }
+    let weekStart = new Date(periodStart);
+    let weekNumber = 1;
+
+    while (weekStart <= periodEnd) {
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      if (weekEnd > periodEnd) {
+        weekEnd.setTime(periodEnd.getTime());
+      }
+
+      const weekApps = applications.filter((app) => {
+        const appDate = new Date(app.createdAt);
+        return appDate >= weekStart && appDate <= weekEnd;
+      }).length;
+
+      chartDataPoints.push({
+        month: `Week ${weekNumber}`,
+        applications: weekApps,
+      });
+
+      weekStart = new Date(weekEnd);
+      weekStart.setDate(weekStart.getDate() + 1);
+      weekNumber++;
+    }
+
+    return chartDataPoints.length > 0
+      ? chartDataPoints
+      : [{ month: "No Data", applications: 0 }];
+  }
+
+  if (timeFilter === "daily") {
+    if (!selectedPeriodId || periods.length === 0) {
+      return [{ month: "No Period Selected", applications: 0 }];
+    }
+
+    const currentPeriod = periods.find((p) => p.id === selectedPeriodId);
+    if (!currentPeriod) {
+      return [{ month: "No Period Selected", applications: 0 }];
+    }
+
+    const periodStart = new Date(currentPeriod.startDate);
+    const periodEnd = new Date(currentPeriod.endDate);
+    periodStart.setHours(0, 0, 0, 0);
+    periodEnd.setHours(23, 59, 59, 999);
+
+    const dayMap = new Map<string, { count: number; timestamp: number }>();
+
+    applications.forEach((app) => {
+      const date = new Date(app.createdAt);
+      date.setHours(0, 0, 0, 0);
+
+      if (date >= periodStart && date <= periodEnd) {
+        const dayKey = date.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
         });
-
-        // Only include days that have applications
-        const sortedData = Array.from(dayMap.entries())
-          .map(([day, count]) => ({ month: day, applications: count }))
-          .sort((a, b) => {
-            const dateA = new Date(a.month);
-            const dateB = new Date(b.month);
-            return dateA.getTime() - dateB.getTime();
-          });
-
-        chartDataPoints.push(...sortedData);
+        const existing = dayMap.get(dayKey);
+        dayMap.set(dayKey, {
+          count: (existing?.count || 0) + 1,
+          timestamp: date.getTime(),
+        });
       }
-    } else {
-      // If no period selected, show empty
-      chartDataPoints.push({
-        month: "No Period Selected",
-        applications: 0,
-      });
-    }
-  }
-
-  // If no data, show empty chart
-  if (chartDataPoints.length === 0) {
-    chartDataPoints.push({
-      month: "No Data",
-      applications: 0,
     });
+
+    const sortedData = Array.from(dayMap.entries())
+      .map(([day, { count, timestamp }]) => ({
+        month: day,
+        applications: count,
+        _ts: timestamp,
+      }))
+      .sort((a, b) => a._ts - b._ts)
+      .map(({ month, applications }) => ({ month, applications }));
+
+    return sortedData.length > 0
+      ? sortedData
+      : [{ month: "No Data", applications: 0 }];
   }
 
-  return chartDataPoints;
+  return [{ month: "No Data", applications: 0 }];
 }
 
-/**
- * Filters applications by education level
- */
 export function filterApplicationsByEducationLevel(
   applications: Application[],
   filter: "all" | "college" | "shs"
@@ -205,4 +178,3 @@ export function filterApplicationsByEducationLevel(
     return true;
   });
 }
-

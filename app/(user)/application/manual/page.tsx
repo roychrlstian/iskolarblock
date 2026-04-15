@@ -306,9 +306,6 @@ export default function ManualApplicationPage() {
         );
       }
 
-      console.log("Application created successfully:", newApplication);
-
-      let idUrl = null;
       let corUrl = null;
       let cogUrl = null;
 
@@ -340,7 +337,7 @@ export default function ManualApplicationPage() {
         toast.info("Uploading documents...");
 
         if (uploadedFiles.id) {
-          idUrl = await uploadFile(uploadedFiles.id, "id");
+          await uploadFile(uploadedFiles.id, "id");
         }
         if (uploadedFiles.cor) {
           corUrl = await uploadFile(uploadedFiles.cor, "cor");
@@ -448,7 +445,6 @@ export default function ManualApplicationPage() {
           )}...`,
           { duration: 5000 }
         );
-        console.log("Blockchain transaction hash:", result.transactionHash);
       } else {
         toast.success("Application submitted successfully!");
       }

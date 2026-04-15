@@ -1,7 +1,6 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -146,7 +145,11 @@ export function AwardingTableMobile({
                         <div>
                           <p className="text-sm text-gray-500">Status</p>
                           <p className="font-medium">
-                            {currentStatus === "GRANTED" ? "Granted" : "Pending"}
+                            {currentStatus === "GRANTED"
+                              ? "Granted"
+                              : currentStatus === "PENDING_GRANT"
+                              ? "Awaiting Confirmation"
+                              : "Pending"}
                           </p>
                         </div>
                       </div>
@@ -159,7 +162,7 @@ export function AwardingTableMobile({
                     </div>
                   </DialogContent>
                 </Dialog>
-                {canModifyAwards && currentStatus !== "GRANTED" ? (
+                {canModifyAwards && currentStatus !== "GRANTED" && currentStatus !== "PENDING_GRANT" ? (
                   <>
                     <Button
                       variant="ghost"

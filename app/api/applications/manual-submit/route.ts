@@ -4,7 +4,6 @@ import { randomUUID } from "crypto";
 import { logApplicationToBlockchain } from "@/lib/services/blockchain";
 import { logEvent } from "@/lib/services/log-events";
 import { sendEmailNotification } from "@/lib/services/email-notification";
-import { getDocumentRemarks } from "@/lib/utils/application-remarks";
 import { getCurrentTimePH } from "@/lib/utils/date-formatting";
 
 export async function POST(request: NextRequest) {
@@ -56,8 +55,6 @@ export async function POST(request: NextRequest) {
         applicationId,
         userData.id
       );
-      console.log("Blockchain transaction hash:", transactionHash);
-
       // Persist blockchain record in database when available
       if (transactionHash) {
         try {
@@ -76,8 +73,6 @@ export async function POST(request: NextRequest) {
 
           if (brError) {
             console.error("Failed to persist blockchain record:", brError);
-          } else {
-            console.log("Blockchain record saved:", blockchainRecord.id);
           }
         } catch (persistError) {
           console.error("Error saving blockchain record:", persistError);

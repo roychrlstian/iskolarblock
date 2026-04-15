@@ -603,9 +603,3 @@ export function UserSidebar(): React.JSX.Element {
     </>
   );
 }
-
-async function handleApplicationNavigation(
-  closeMobileMenu: boolean
-): Promise<void> {
-  // placeholder
-}

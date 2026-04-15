@@ -25,6 +25,7 @@ import {
   XCircle,
   CloudUpload,
   Award,
+  Handshake,
 } from "lucide-react";
 import { ApplicationDetailsDialog } from "./ApplicationDetailsDialog";
 import { ResponsiveTableWrapper } from "@/components/common/responsive-table-wrapper";
@@ -46,6 +47,7 @@ interface ApplicationsTableProps {
 
 const statusIcons = {
   APPROVED: CheckCircle,
+  PENDING_GRANT: Handshake,
   GRANTED: Award,
   PENDING: Clock,
   REJECTED: XCircle,
@@ -65,9 +67,9 @@ const getRemarksBadgeClass = (remarks?: string | null, status?: string) => {
     return `${base} bg-red-50 text-red-700 border-red-100`;
   }
 
-  // If granted, don't show remarks badge
-  if (status === "GRANTED") {
-    return ""; // Return empty string to hide badge
+  // If granted or pending grant, don't show remarks badge
+  if (status === "GRANTED" || status === "PENDING_GRANT") {
+    return "";
   }
 
   // Default behavior for other statuses
@@ -83,6 +85,10 @@ const getRemarksBadgeClass = (remarks?: string | null, status?: string) => {
   }
   return `${base} bg-yellow-50 text-yellow-700 border-yellow-100`;
 };
+
+function statusLabel(status: string): string {
+  return status === "PENDING_GRANT" ? "Awaiting Confirmation" : status;
+}
 
 export function ApplicationsTable({
   applications,
@@ -149,12 +155,12 @@ export function ApplicationsTable({
                       >
                         <div className="flex items-center">
                           {getStatusIcon(application.status)}
-                          <span className="ml-1">{application.status}</span>
+                          <span className="ml-1">{statusLabel(application.status)}</span>
                         </div>
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {application.status !== "GRANTED" && (
+                      {application.status !== "GRANTED" && application.status !== "PENDING_GRANT" && (
                         <span
                           className={getRemarksBadgeClass(
                             application.remarks,
@@ -173,6 +179,18 @@ export function ApplicationsTable({
                               href={`/application/complete/${application.id}`}
                             >
                               <CloudUpload className="w-4 h-4" />
+                            </Link>
+                          </Button>
+                        )}
+                        {application.status === "PENDING_GRANT" && (
+                          <Button
+                            size="sm"
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                            asChild
+                          >
+                            <Link href="/application">
+                              <Handshake className="w-4 h-4 mr-1" />
+                              Confirm
                             </Link>
                           </Button>
                         )}
@@ -221,12 +239,13 @@ export function ApplicationsTable({
                         >
                           <div className="flex items-center">
                             {getStatusIcon(application.status)}
-                            <span className="ml-1">{application.status}</span>
+                            <span className="ml-1">{statusLabel(application.status)}</span>
                           </div>
                         </Badge>
                       </div>
 
                       {application.status !== "GRANTED" &&
+                        application.status !== "PENDING_GRANT" &&
                         application.remarks && (
                           <div>
                             <span className="text-xs text-gray-500 font-medium">
@@ -261,9 +280,22 @@ export function ApplicationsTable({
                             </Link>
                           </Button>
                         )}
+                        {application.status === "PENDING_GRANT" && (
+                          <Button
+                            size="sm"
+                            className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white"
+                            asChild
+                          >
+                            <Link href="/application">
+                              <Handshake className="w-4 h-4 mr-2" />
+                              Confirm Grant
+                            </Link>
+                          </Button>
+                        )}
                         <div
                           className={
-                            application.status === "PENDING"
+                            application.status === "PENDING" ||
+                            application.status === "PENDING_GRANT"
                               ? "flex-1"
                               : "w-full"
                           }

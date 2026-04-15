@@ -70,6 +70,7 @@ export function IdUploadStep<T extends IdForm>({
   const [extractedData, setExtractedData] =
     useState<IDExtractionResponse | null>(null);
   const [isExtractingData, setIsExtractingData] = useState<boolean>(false);
+  const [ocrConfidence, setOcrConfidence] = useState<number>(0);
 
   const showInvalidFileTypeError = (
     alertMessage = DEFAULT_INVALID_FILE_MESSAGE,
@@ -101,13 +102,13 @@ export function IdUploadStep<T extends IdForm>({
     let filledCount = 0;
 
     // Helper to safely set value
+    const setField = setValue as (field: string, value: unknown) => void;
     const safeSetValue = (field: string, value: string): void => {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setValue(field as any, value as any);
+        setField(field, value);
         filledCount++;
-      } catch (error) {
-        console.error(`Failed to set field ${field}:`, error);
+      } catch {
+        // field may not exist on this form variant
       }
     };
 
@@ -195,10 +196,6 @@ export function IdUploadStep<T extends IdForm>({
 
       // Skip if we've already processed this exact file
       if (uploadedFile.name === processedIdFile && isProcessingDone) {
-        console.log(
-          "✓ Skipping re-processing - file already processed:",
-          uploadedFile.name
-        );
         return;
       }
 
@@ -231,6 +228,7 @@ export function IdUploadStep<T extends IdForm>({
       }
 
       setOcrText(result.text);
+      setOcrConfidence(result.confidence);
       onOcrTextChange?.(result.text);
       setProgress(80);
 
@@ -241,7 +239,7 @@ export function IdUploadStep<T extends IdForm>({
         setProgress(85);
 
         try {
-          const extractedInfo = await extractIDData(result.text);
+          const extractedInfo = await extractIDData(result.text, result.confidence);
 
           if (!cancelled) {
             setIsExtractingData(false);
@@ -265,10 +263,7 @@ export function IdUploadStep<T extends IdForm>({
                 "Could not extract structured data from ID. Please fill the form manually.",
                 { duration: 5000 }
               );
-              console.warn(
-                "No structured data extracted from OCR text. OCR text:",
-                result.text.substring(0, 200)
-              );
+              
             }
           }
         } catch (extractError) {
@@ -282,8 +277,6 @@ export function IdUploadStep<T extends IdForm>({
                 ? extractError.message
                 : "Unknown error occurred";
 
-            console.error("ID extraction error:", errorMessage);
-
             // Check if the uploaded file is not a valid ID
             if (
               errorMessage.includes("Invalid file type") ||
@@ -291,12 +284,8 @@ export function IdUploadStep<T extends IdForm>({
               errorMessage.includes("wrong file") ||
               errorMessage.includes("valid ID document")
             ) {
-              console.log("Invalid file type detected, removing file");
               const fullErrorMessage = `${errorMessage}. Please remove this file and upload a valid Student ID or Valid ID.`;
               showInvalidFileTypeError(fullErrorMessage, errorMessage);
-              console.log(
-                "File removed, invalid file type state cleared, error preserved"
-              );
               return;
             } else if (errorMessage.includes("timeout")) {
               invalidFileTypeRef.current = false;
@@ -330,7 +319,7 @@ export function IdUploadStep<T extends IdForm>({
                 "Auto-fill is not configured. Please fill the form manually.",
                 { duration: 5000 }
               );
-              console.warn("Extraction service not configured");
+              
             } else if (errorMessage.includes("temporarily unavailable")) {
               invalidFileTypeRef.current = false;
               setIsInvalidFileType(false);
@@ -343,10 +332,6 @@ export function IdUploadStep<T extends IdForm>({
                 "Extraction service is currently unavailable. You can still view the OCR text below."
               );
             } else {
-              console.error(
-                "Extraction failed with unhandled error, defaulting to invalid file message:",
-                errorMessage
-              );
               showInvalidFileTypeError();
             }
           }
@@ -439,11 +424,26 @@ export function IdUploadStep<T extends IdForm>({
 
             {extractedData && (
               <div className="border rounded-md bg-green-50 p-4 space-y-2">
-                <div className="flex items-center gap-2 mb-3">
-                  <CheckCircle2 className="w-5 h-5 text-green-600" />
-                  <p className="text-sm font-semibold text-green-800">
-                    Information extracted from ID
-                  </p>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-5 h-5 text-green-600" />
+                    <p className="text-sm font-semibold text-green-800">
+                      Information extracted from ID
+                    </p>
+                  </div>
+                  {ocrConfidence > 0 && (
+                    <span
+                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        ocrConfidence >= 80
+                          ? "bg-green-100 text-green-800"
+                          : ocrConfidence >= 50
+                          ? "bg-yellow-100 text-yellow-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      OCR Accuracy: {ocrConfidence}%
+                    </span>
+                  )}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
                   {extractedData.first_name && (

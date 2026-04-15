@@ -23,7 +23,6 @@ export default function UserLayout({
     }
     // Only redirect if role is fully loaded and user is confirmed admin
     if (!loadingRole && isAdmin) {
-      console.log("User layout: redirecting admin to admin-dashboard");
       router.push("/admin-dashboard");
     }
   }, [hydrated, user, isAdmin, loadingRole, router]);

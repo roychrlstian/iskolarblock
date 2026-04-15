@@ -267,7 +267,7 @@ function sortByLastName(applications: Application[]): Application[] {
 
 export function AwardingSheetPDF({
   applications,
-  period,
+  period: _period,
   iskolarblockLogo,
   skLogo,
 }: AwardingSheetPDFProps): React.JSX.Element {

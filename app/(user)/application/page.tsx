@@ -138,6 +138,7 @@ export default function ApplicationPage() {
                   (currentApplicationStatus as
                     | "PENDING"
                     | "APPROVED"
+                    | "PENDING_GRANT"
                     | "GRANTED"
                     | "REJECTED") || "PENDING"
                 }

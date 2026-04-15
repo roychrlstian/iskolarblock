@@ -10,9 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -279,6 +277,9 @@ export default function AwardingPage() {
     const totalGranted = applications.filter(
       (app) => app.status === "GRANTED"
     ).length;
+    const totalPendingGrant = applications.filter(
+      (app) => app.status === "PENDING_GRANT"
+    ).length;
     const totalPending = applications.filter(
       (app) => app.status === "APPROVED"
     ).length;
@@ -290,6 +291,7 @@ export default function AwardingPage() {
     return {
       totalApproved: applications.length,
       pending: totalPending,
+      pendingGrant: totalPendingGrant,
       granted: totalGranted,
       totalAmount,
     };
@@ -377,11 +379,13 @@ export default function AwardingPage() {
 
       setApplications((prev) =>
         prev.map((app) =>
-          app.id === applicationId ? { ...app, status: "GRANTED" } : app
+          app.id === applicationId
+            ? { ...app, status: "PENDING_GRANT" as AwardingStatus }
+            : app
         )
       );
 
-      toast.success("Scholarship marked as granted");
+      toast.success("Grant offer sent — awaiting user confirmation");
     } catch (error) {
       console.error("Failed to grant scholarship:", error);
       toast.error("An error occurred while updating status");
@@ -493,6 +497,13 @@ export default function AwardingPage() {
         </Badge>
       );
     }
+    if (status === "PENDING_GRANT") {
+      return (
+        <Badge className="bg-indigo-100 text-indigo-700 border-indigo-200">
+          Awaiting Confirmation
+        </Badge>
+      );
+    }
     return (
       <Badge
         variant="outline"
@@ -598,6 +609,7 @@ export default function AwardingPage() {
             ) : (
               <AwardingStats
                 pending={stats.pending}
+                pendingGrant={stats.pendingGrant}
                 granted={stats.granted}
                 totalAmount={stats.totalAmount}
               />

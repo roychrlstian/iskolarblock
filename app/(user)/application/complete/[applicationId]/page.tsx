@@ -37,7 +37,7 @@ interface PersonalInfoSummary {
 
 interface ApplicationSummary {
   id: string;
-  status: "PENDING" | "APPROVED" | "REJECTED" | "GRANTED";
+  status: "PENDING" | "APPROVED" | "REJECTED" | "PENDING_GRANT" | "GRANTED";
   applicationType: string;
   CertificateOfGrades?: ExistingCertificate[];
   CertificateOfRegistration?: ExistingCertificate[];
@@ -285,7 +285,6 @@ export default function CompleteApplicationPage() {
           return;
         }
 
-        console.log("📤 Uploading COG file to Supabase...");
         const { uploadFileToSupabase } = await import(
           "@/lib/utils/file-upload"
         );
@@ -309,19 +308,14 @@ export default function CompleteApplicationPage() {
                 applicationId,
                 "cog"
               );
-              console.log("✅ COG uploaded to Supabase:", cogFileUrl);
               payload.cogFileUrl = cogFileUrl;
             } catch (uploadError) {
-              console.warn("⚠️ Supabase upload failed, falling back to base64:", uploadError);
               payload.cogFile = await fileToBase64(certificateOfGrades);
-              console.log("✅ COG converted to base64 (fallback)");
             }
           } else {
-            console.warn("⚠️ User data not found, falling back to base64");
             payload.cogFile = await fileToBase64(certificateOfGrades);
           }
         } else {
-          console.warn("⚠️ User not authenticated, falling back to base64");
           payload.cogFile = await fileToBase64(certificateOfGrades);
         }
 
@@ -340,7 +334,6 @@ export default function CompleteApplicationPage() {
           return;
         }
 
-        console.log("📤 Uploading COR file to Supabase...");
         const { uploadFileToSupabase } = await import(
           "@/lib/utils/file-upload"
         );
@@ -364,19 +357,14 @@ export default function CompleteApplicationPage() {
                 applicationId,
                 "cor"
               );
-              console.log("✅ COR uploaded to Supabase:", corFileUrl);
               payload.corFileUrl = corFileUrl;
             } catch (uploadError) {
-              console.warn("⚠️ Supabase upload failed, falling back to base64:", uploadError);
               payload.corFile = await fileToBase64(certificateOfRegistration);
-              console.log("✅ COR converted to base64 (fallback)");
             }
           } else {
-            console.warn("⚠️ User data not found, falling back to base64");
             payload.corFile = await fileToBase64(certificateOfRegistration);
           }
         } else {
-          console.warn("⚠️ User not authenticated, falling back to base64");
           payload.corFile = await fileToBase64(certificateOfRegistration);
         }
 
@@ -530,10 +518,10 @@ export default function CompleteApplicationPage() {
                 setProcessedCogFile={setProcessedCogFile}
                 processedCorFile={processedCorFile}
                 setProcessedCorFile={setProcessedCorFile}
-                onCogOcrChange={(text, data) => {
+                onCogOcrChange={(_text, data) => {
                   setCogExtractedData(data);
                 }}
-                onCorOcrChange={(text, data) => {
+                onCorOcrChange={(_text, data) => {
                   setCorExtractedData(data);
                 }}
                 existingCogFileUrl={existingCogDocument?.fileUrl || null}

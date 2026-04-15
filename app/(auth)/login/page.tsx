@@ -2,7 +2,6 @@
 
 import { motion } from "framer-motion";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import NextImage from "next/image";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
@@ -19,7 +18,6 @@ import {
 import { toast } from "sonner";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
