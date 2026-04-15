@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sign } from "jsonwebtoken";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
-import { validateJwtSecret } from "@/lib/utils/jwt-validation";
+import { extractCorWithGemini } from "@/lib/services/gemini-text-cleanup";
 
 export interface CORExtractionResponse {
   "Certificate of Registration": boolean;
@@ -13,113 +12,21 @@ export interface CORExtractionResponse {
   total_units: number | null;
 }
 
-// N8N response format with value and accuracy
-interface N8NFieldResponse {
-  value: string | number | null;
-  accuracy: number;
-}
-
-interface N8NWebhookResponse {
-  "Certificate of Registration": boolean;
-  school: N8NFieldResponse;
-  school_year: N8NFieldResponse;
-  semester: N8NFieldResponse;
-  course: N8NFieldResponse;
-  name: N8NFieldResponse;
-  total_units: N8NFieldResponse;
-}
-
 interface RequestBody {
   ocrText: string;
-  fileData?: string; // Base64 file data (for small files < 4MB)
-  fileUrl?: string; // Supabase storage path (for large files > 4MB)
+  fileData?: string;
+  fileUrl?: string;
   fileName?: string;
   userId?: string;
   applicantName?: string | null;
 }
 
-/**
- * Transform N8N response format to our expected format
- * N8N returns: { field: { value: "X", accuracy: 0.9 } }
- * We need: { field: "X" }
- */
-const toTitleCase = (input: string | null): string | null => {
-  if (typeof input !== "string") return null;
-  const normalized = input
-    .trim()
-    .replace(/\s+/g, " ")
-    .replace(/\s*,\s*/g, ", ")
-    .toLowerCase();
-
-  return normalized.replace(/\b([a-z])/g, (match) => match.toUpperCase());
-};
-
-function transformN8NResponse(
-  n8nData: N8NWebhookResponse | N8NWebhookResponse[]
-): CORExtractionResponse {
-  // Handle array response (N8N returns array with single object)
-  const dataObject = Array.isArray(n8nData) ? n8nData[0] : n8nData;
-
-  if (!dataObject) {
-    throw new Error("N8N response is empty");
-  }
-
-  // Extract values from N8N format
-  const extractValue = (
-    field: N8NFieldResponse | string | number | null
-  ): string | number | null => {
-    if (field === null || field === undefined) return null;
-    if (typeof field === "string" || typeof field === "number") return field; // Backward compatibility
-    if (typeof field === "object" && "value" in field) {
-      return field.value;
-    }
-    return null;
-  };
-
-  const transformed: CORExtractionResponse = {
-    "Certificate of Registration":
-      dataObject["Certificate of Registration"] ?? true,
-    school: toTitleCase(extractValue(dataObject.school) as string | null),
-    school_year: toTitleCase(
-      extractValue(dataObject.school_year) as string | null
-    ),
-    semester: toTitleCase(extractValue(dataObject.semester) as string | null),
-    course: toTitleCase(extractValue(dataObject.course) as string | null),
-    name: toTitleCase(extractValue(dataObject.name) as string | null),
-    total_units: extractValue(dataObject.total_units) as number | null,
-  };
-
-  // Log accuracy information if available
-  console.log("=== COR Field Accuracy Report ===");
-  Object.entries(dataObject).forEach(([key, field]) => {
-    if (
-      field &&
-      typeof field === "object" &&
-      "accuracy" in field &&
-      "value" in field
-    ) {
-      if (field.value !== null) {
-        console.log(
-          `  ${key}: ${JSON.stringify(field.value).substring(
-            0,
-            100
-          )} (accuracy: ${(field.accuracy * 100).toFixed(0)}%)`
-        );
-      }
-    }
-  });
-
-  return transformed;
-}
-
 export async function POST(request: NextRequest) {
   try {
-    // Parse request body with error handling
     let body: RequestBody;
     try {
       body = (await request.json()) as RequestBody;
-    } catch (parseError) {
-      console.error("Failed to parse request body:", parseError);
+    } catch {
       return NextResponse.json(
         { error: "Invalid request body" },
         { status: 400 }
@@ -129,19 +36,13 @@ export async function POST(request: NextRequest) {
     const { ocrText, fileData, fileUrl, fileName, userId, applicantName } =
       body;
 
-    // Use provided fileUrl or upload fileData to Supabase storage
     let finalFileUrl: string | null = fileUrl || null;
 
-    // Upload file to Supabase storage if fileData is provided (for smaller files)
     if (fileData && fileName && userId && !fileUrl) {
       try {
         const supabase = getSupabaseServerClient();
-
-        // Convert base64 to buffer
         const base64Data = fileData.split(",")[1] || fileData;
         const buffer = Buffer.from(base64Data, "base64");
-
-        // Generate unique file path
         const timestamp = Date.now();
         const filePath = `${userId}/cor/${timestamp}-${fileName}`;
 
@@ -158,15 +59,12 @@ export async function POST(request: NextRequest) {
           console.error("COR file upload error:", uploadError);
         } else {
           finalFileUrl = uploadData.path;
-          console.log("✅ COR file uploaded to storage:", finalFileUrl);
         }
       } catch (storageError) {
         console.error("COR storage error:", storageError);
-        // Continue with OCR even if storage fails
       }
     }
 
-    // Validate OCR text
     if (!ocrText || typeof ocrText !== "string") {
       return NextResponse.json(
         { error: "OCR text is required and must be a string" },
@@ -188,215 +86,50 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check environment variables
-    const webhookUrl = process.env.N8N_WEBHOOK_URL3; // COR uses N8N_WEBHOOK_URL3
-    const jwtSecret = process.env.JWT_SECRET;
-
-    if (!webhookUrl) {
-      console.error("N8N_WEBHOOK_URL3 environment variable is not configured");
+    if (!process.env.GEMINI_API_KEY) {
       return NextResponse.json(
         { error: "COR extraction service not configured" },
         { status: 503 }
       );
     }
 
-    // Validate JWT secret with security requirements
-    const jwtValidation = validateJwtSecret(jwtSecret);
-    if (!jwtValidation.isValid) {
-      console.error("JWT_SECRET validation failed:", jwtValidation.error);
+    const fields = await extractCorWithGemini(
+      ocrText,
+      applicantName ?? undefined
+    );
+
+    if (!fields["Certificate of Registration"]) {
       return NextResponse.json(
         {
-          error: jwtValidation.error || "Authentication service not configured",
+          error:
+            "Invalid file type: Uploaded file is not a valid Certificate of Registration document",
         },
-        { status: 503 }
+        { status: 400 }
       );
     }
 
-    // Validate webhook URL format
-    try {
-      new URL(webhookUrl);
-    } catch {
-      console.error("Invalid N8N_WEBHOOK_URL3:", webhookUrl);
+    if (!fields["Match name"]) {
       return NextResponse.json(
-        { error: "Invalid webhook URL configuration" },
-        { status: 500 }
-      );
-    }
-
-    // Create JWT token with OCR text payload
-    let token: string;
-    try {
-      const payload = {
-        ocrText,
-        name: applicantName || "",
-        timestamp: Date.now(),
-      };
-
-      token = sign(payload, jwtSecret as string, {
-        expiresIn: "5m",
-      });
-    } catch (jwtError) {
-      console.error("Failed to create JWT token:", jwtError);
-      return NextResponse.json(
-        { error: "Failed to create authentication token" },
-        { status: 500 }
-      );
-    }
-
-    // Send to N8N webhook
-    let response: Response;
-    try {
-      console.log("=== N8N COR Webhook Request ===");
-      console.log("URL:", webhookUrl);
-      console.log("OCR Text Length:", ocrText.length);
-      console.log("OCR Text Preview:", ocrText.substring(0, 200));
-
-      response = await fetch(webhookUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+        {
+          error:
+            "The name on your Certificate of Registration does not match the name entered in the application form. Please upload the correct COR.",
         },
-      });
-
-      console.log("=== N8N COR Webhook Response ===");
-      console.log("Status Code:", response.status);
-      console.log("Status Text:", response.statusText);
-    } catch (fetchError) {
-      if (fetchError instanceof Error) {
-        console.error("COR webhook request failed:", fetchError.message);
-        return NextResponse.json(
-          {
-            error: "Failed to connect to extraction service. Please try again.",
-          },
-          { status: 503 }
-        );
-      }
-      console.error("Unknown webhook error:", fetchError);
-      return NextResponse.json(
-        { error: "Network error occurred" },
-        { status: 503 }
+        { status: 400 }
       );
     }
 
-    // Check response status
-    if (!response.ok) {
-      const statusCode = response.status;
+    const data: CORExtractionResponse = {
+      "Certificate of Registration": fields["Certificate of Registration"],
+      school: fields.school,
+      school_year: fields.school_year,
+      semester: fields.semester,
+      course: fields.course,
+      name: fields.name,
+      total_units: fields.total_units,
+    };
 
-      try {
-        const errorData = await response.text();
-        console.error(
-          `COR Webhook error response (${statusCode}):`,
-          errorData.substring(0, 500)
-        );
-      } catch {
-        console.error("Could not read error response body");
-      }
-
-      // Return appropriate error based on status code
-      if (statusCode === 401 || statusCode === 403) {
-        return NextResponse.json(
-          { error: "Authentication failed with extraction service" },
-          { status: 502 }
-        );
-      } else if (statusCode === 404) {
-        return NextResponse.json(
-          { error: "Extraction service endpoint not found" },
-          { status: 502 }
-        );
-      } else if (statusCode >= 500) {
-        return NextResponse.json(
-          { error: "Extraction service is temporarily unavailable" },
-          { status: 503 }
-        );
-      }
-
-      return NextResponse.json(
-        { error: "Failed to extract data from document" },
-        { status: 502 }
-      );
-    }
-
-    // Parse response data
-    let data: CORExtractionResponse;
-    try {
-      const responseText = await response.text();
-      console.log("=== N8N COR Webhook Response Body ===");
-      console.log("Raw Response:", responseText.substring(0, 1000));
-
-      const rawData = JSON.parse(responseText) as
-        | N8NWebhookResponse
-        | N8NWebhookResponse[];
-      console.log("Parsed Raw Data:", JSON.stringify(rawData, null, 2));
-
-      // Check if the uploaded file is actually a Certificate of Registration
-      const dataObject = Array.isArray(rawData) ? rawData[0] : rawData;
-      if (
-        dataObject &&
-        "Certificate of Registration" in dataObject &&
-        dataObject["Certificate of Registration"] === false
-      ) {
-        console.error(
-          "Invalid file type: Uploaded file is not a valid Certificate of Registration document"
-        );
-        return NextResponse.json(
-          {
-            error:
-              "Invalid file type: Uploaded file is not a valid Certificate of Registration document",
-          },
-          { status: 400 }
-        );
-      }
-
-      if (
-        dataObject &&
-        "Match name" in dataObject &&
-        dataObject["Match name"] === false
-      ) {
-        console.error(
-          "Name mismatch detected between application form and COR document"
-        );
-        return NextResponse.json(
-          {
-            error:
-              "The name on your Certificate of Registration does not match the name entered in the application form. Please upload the correct COR.",
-          },
-          { status: 400 }
-        );
-      }
-
-      // Transform N8N format to our expected format
-      data = transformN8NResponse(rawData);
-      console.log("=== Transformed COR Response Data ===");
-      console.log(JSON.stringify(data, null, 2));
-    } catch (jsonError) {
-      console.error("Failed to parse COR webhook response:", jsonError);
-      const errorMessage =
-        jsonError instanceof Error ? jsonError.message : "Unknown error";
-      return NextResponse.json(
-        { error: `Invalid response from extraction service: ${errorMessage}` },
-        { status: 502 }
-      );
-    }
-
-    // Validate response structure
-    if (!data || typeof data !== "object") {
-      console.error("COR Webhook returned invalid data structure:", data);
-      return NextResponse.json(
-        { error: "Invalid data format from extraction service" },
-        { status: 502 }
-      );
-    }
-
-    console.log(
-      "✅ Successfully extracted and transformed COR data from N8N webhook"
-    );
-    return NextResponse.json({
-      ...data,
-      fileUrl: finalFileUrl,
-    });
+    return NextResponse.json({ ...data, fileUrl: finalFileUrl });
   } catch (error) {
-    // Catch-all error handler
     console.error("Unexpected error in extract-cor API:", error);
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";

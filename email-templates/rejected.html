@@ -65,8 +65,7 @@
             <tr>
               <td style="background-color: #ffffff; padding: 28px">
                 <p style="margin: 0 0 14px 0; color: #333333; font-size: 15px">
-                  Dear {{ $('Set Application Data').item.json.body.applicantName
-                  }},
+                  Dear {{applicantName}},
                 </p>
 
                 <p style="margin: 0 0 18px 0; color: #333333; font-size: 15px">
@@ -102,8 +101,7 @@
                             font-weight: 600;
                             margin-left: 8px;
                           "
-                          >{{ $('Set Application
-                          Data').item.json.body.applicationId }}</span
+                          >{{applicationId}}</span
                         >
                       </div>
                       <div style="margin-bottom: 8px">
@@ -117,8 +115,7 @@
                             font-weight: 600;
                             margin-left: 8px;
                           "
-                          >{{ $('Set Application
-                          Data').item.json.body.applicationType }}</span
+                          >{{applicationType}}</span
                         >
                       </div>
                       <div style="margin-bottom: 12px">
@@ -152,8 +149,7 @@
                           Reason:
                         </div>
                         <div style="color: #333333; font-size: 14px">
-                          {{ $('Set Application
-                          Data').item.json.body.rejectionReason }}
+                          {{rejectionReason}}
                         </div>
                       </div>
                     </td>
