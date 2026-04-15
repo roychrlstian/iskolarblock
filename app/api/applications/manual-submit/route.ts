@@ -56,8 +56,6 @@ export async function POST(request: NextRequest) {
         applicationId,
         userData.id
       );
-      console.log("Blockchain transaction hash:", transactionHash);
-
       // Persist blockchain record in database when available
       if (transactionHash) {
         try {
@@ -76,8 +74,6 @@ export async function POST(request: NextRequest) {
 
           if (brError) {
             console.error("Failed to persist blockchain record:", brError);
-          } else {
-            console.log("Blockchain record saved:", blockchainRecord.id);
           }
         } catch (persistError) {
           console.error("Error saving blockchain record:", persistError);

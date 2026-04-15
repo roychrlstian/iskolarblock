@@ -306,8 +306,6 @@ export default function ManualApplicationPage() {
         );
       }
 
-      console.log("Application created successfully:", newApplication);
-
       let idUrl = null;
       let corUrl = null;
       let cogUrl = null;
@@ -448,7 +446,6 @@ export default function ManualApplicationPage() {
           )}...`,
           { duration: 5000 }
         );
-        console.log("Blockchain transaction hash:", result.transactionHash);
       } else {
         toast.success("Application submitted successfully!");
       }

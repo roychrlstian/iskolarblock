@@ -195,10 +195,6 @@ export function IdUploadStep<T extends IdForm>({
 
       // Skip if we've already processed this exact file
       if (uploadedFile.name === processedIdFile && isProcessingDone) {
-        console.log(
-          "✓ Skipping re-processing - file already processed:",
-          uploadedFile.name
-        );
         return;
       }
 
@@ -265,10 +261,7 @@ export function IdUploadStep<T extends IdForm>({
                 "Could not extract structured data from ID. Please fill the form manually.",
                 { duration: 5000 }
               );
-              console.warn(
-                "No structured data extracted from OCR text. OCR text:",
-                result.text.substring(0, 200)
-              );
+              
             }
           }
         } catch (extractError) {
@@ -282,8 +275,6 @@ export function IdUploadStep<T extends IdForm>({
                 ? extractError.message
                 : "Unknown error occurred";
 
-            console.error("ID extraction error:", errorMessage);
-
             // Check if the uploaded file is not a valid ID
             if (
               errorMessage.includes("Invalid file type") ||
@@ -291,12 +282,8 @@ export function IdUploadStep<T extends IdForm>({
               errorMessage.includes("wrong file") ||
               errorMessage.includes("valid ID document")
             ) {
-              console.log("Invalid file type detected, removing file");
               const fullErrorMessage = `${errorMessage}. Please remove this file and upload a valid Student ID or Valid ID.`;
               showInvalidFileTypeError(fullErrorMessage, errorMessage);
-              console.log(
-                "File removed, invalid file type state cleared, error preserved"
-              );
               return;
             } else if (errorMessage.includes("timeout")) {
               invalidFileTypeRef.current = false;
@@ -330,7 +317,7 @@ export function IdUploadStep<T extends IdForm>({
                 "Auto-fill is not configured. Please fill the form manually.",
                 { duration: 5000 }
               );
-              console.warn("Extraction service not configured");
+              
             } else if (errorMessage.includes("temporarily unavailable")) {
               invalidFileTypeRef.current = false;
               setIsInvalidFileType(false);
@@ -343,10 +330,6 @@ export function IdUploadStep<T extends IdForm>({
                 "Extraction service is currently unavailable. You can still view the OCR text below."
               );
             } else {
-              console.error(
-                "Extraction failed with unhandled error, defaulting to invalid file message:",
-                errorMessage
-              );
               showInvalidFileTypeError();
             }
           }

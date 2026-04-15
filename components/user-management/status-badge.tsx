@@ -11,7 +11,7 @@ export function StatusBadge({ status }: StatusBadgeProps): React.JSX.Element {
   return (
     <Badge variant="secondary" className={config.color}>
       <Icon className="w-3 h-3 mr-1" />
-      {status.replace("_", " ")}
+      {status.replace(/_/g, " ")}
     </Badge>
   );
 }

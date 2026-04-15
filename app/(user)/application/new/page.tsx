@@ -840,11 +840,7 @@ export default function NewApplicationPage() {
 
               <Button
                 onClick={async (e) => {
-                  console.log("🔘 Button clicked, step:", currentStep);
                   if (currentStep === newApplicationSteps.length) {
-                    console.log("📤 Submitting form...");
-                    console.log("Form errors:", errors);
-                    console.log("Form values:", watch());
                     await handleSubmit(onSubmit, handleValidationErrors)(e);
                   } else {
                     const stepFields = stepFieldErrorMap[currentStep];

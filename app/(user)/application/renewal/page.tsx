@@ -298,7 +298,6 @@ export default function RenewalApplicationPage() {
   });
 
   const onSubmit = async (data: RenewalApplicationFormData): Promise<void> => {
-    console.log("🚀 Renewal submission called");
     try {
       setIsSubmitting(true);
 
@@ -313,7 +312,6 @@ export default function RenewalApplicationPage() {
       let cogFileUrl: string | null = null;
       if (certificateOfGrades) {
         try {
-          console.log("📤 Uploading COG file to Supabase...");
           const { uploadFileToSupabase } = await import(
             "@/lib/utils/file-upload"
           );
@@ -337,18 +335,13 @@ export default function RenewalApplicationPage() {
                   undefined,
                   "cog"
                 );
-                console.log("✅ COG uploaded to Supabase:", cogFileUrl);
               } catch (uploadError) {
-                console.warn("⚠️ Supabase upload failed, falling back to base64:", uploadError);
                 cogFileBase64 = await readFileAsBase64(certificateOfGrades);
-                console.log("✅ COG converted to base64 (fallback)");
               }
             } else {
-              console.warn("⚠️ User data not found, falling back to base64");
               cogFileBase64 = await readFileAsBase64(certificateOfGrades);
             }
           } else {
-            console.warn("⚠️ User not authenticated, falling back to base64");
             cogFileBase64 = await readFileAsBase64(certificateOfGrades);
           }
         } catch (error) {
@@ -364,7 +357,6 @@ export default function RenewalApplicationPage() {
       let corFileUrl: string | null = null;
       if (certificateOfRegistration) {
         try {
-          console.log("📤 Uploading COR file to Supabase...");
           const { uploadFileToSupabase } = await import(
             "@/lib/utils/file-upload"
           );
@@ -388,18 +380,13 @@ export default function RenewalApplicationPage() {
                   undefined,
                   "cor"
                 );
-                console.log("✅ COR uploaded to Supabase:", corFileUrl);
               } catch (uploadError) {
-                console.warn("⚠️ Supabase upload failed, falling back to base64:", uploadError);
                 corFileBase64 = await readFileAsBase64(certificateOfRegistration);
-                console.log("✅ COR converted to base64 (fallback)");
               }
             } else {
-              console.warn("⚠️ User data not found, falling back to base64");
               corFileBase64 = await readFileAsBase64(certificateOfRegistration);
             }
           } else {
-            console.warn("⚠️ User not authenticated, falling back to base64");
             corFileBase64 = await readFileAsBase64(certificateOfRegistration);
           }
         } catch (error) {
@@ -451,14 +438,6 @@ export default function RenewalApplicationPage() {
         corFileName: certificateOfRegistration?.name ?? null,
       };
 
-      console.log("📦 Payload prepared:", {
-        hasCogFile: !!cogFileBase64,
-        hasCogUrl: !!cogFileUrl,
-        hasCorFile: !!corFileBase64,
-        hasCorUrl: !!corFileUrl,
-      });
-
-      console.log("📤 Sending renewal application to server...");
       const response = await fetch("/api/applications/renew", {
         method: "POST",
         headers: {
@@ -466,8 +445,6 @@ export default function RenewalApplicationPage() {
         },
         body: JSON.stringify(submissionData),
       });
-
-      console.log("📥 Response status:", response.status);
 
       if (!response.ok) {
         // Handle 413 errors (Content Too Large) - Vercel returns plain text, not JSON

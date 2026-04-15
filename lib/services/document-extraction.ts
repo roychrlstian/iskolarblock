@@ -1,9 +1,3 @@
-/**
- * Document Extraction Service
- * Handles extraction of Certificate of Grades (COG) and Certificate of Registration (COR)
- * Sends OCR text to backend APIs which forward to N8N webhooks for structured data extraction
- */
-
 export interface COGExtractionResponse {
   "Certificate of Grades": boolean;
   school: string | null;
@@ -41,380 +35,170 @@ export interface DocumentExtractionError {
   statusCode?: number;
 }
 
-/**
- * Send OCR text to backend API for Certificate of Grades extraction
- * Returns structured COG data or throws an error
- */
+async function uploadAndGetUrl(
+  file: File,
+  userId: string,
+  docType: "cog" | "cor"
+): Promise<{ fileData?: string; fileUrl?: string; fileName: string }> {
+  const fileName = file.name;
+
+  try {
+    const { uploadFileToSupabase } = await import("@/lib/utils/file-upload");
+    const fileUrl = await uploadFileToSupabase(file, userId, undefined, docType);
+    return { fileUrl, fileName };
+  } catch {
+    const fileData = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    return { fileData, fileName };
+  }
+}
+
+function handleApiError(statusCode: number, errorMessage: string): never {
+  if (statusCode === 400) {
+    throw new Error(
+      errorMessage || "Invalid request. Please check the uploaded document."
+    );
+  } else if (statusCode === 401 || statusCode === 403) {
+    throw new Error("Authentication error. Please try again.");
+  } else if (statusCode === 404) {
+    throw new Error("Extraction service not found. Please contact support.");
+  } else if (statusCode === 503) {
+    throw new Error(
+      errorMessage ||
+        "Extraction service is temporarily unavailable. Please try again later."
+    );
+  } else if (statusCode === 504) {
+    throw new Error(
+      "Request timed out. The document may be too complex to process."
+    );
+  } else if (statusCode >= 500) {
+    throw new Error(
+      "Server error occurred. Please try again in a few moments."
+    );
+  }
+  throw new Error(errorMessage);
+}
+
 export async function extractCOGData(
   ocrText: string,
   file?: File,
   userId?: string,
   applicantName?: string
 ): Promise<COGExtractionResponse | null> {
-  // Validate input
   if (!ocrText || typeof ocrText !== "string") {
-    console.error("extractCOGData: Invalid OCR text provided");
     throw new Error("Invalid OCR text");
   }
 
   if (ocrText.trim().length === 0) {
-    console.warn("extractCOGData: Empty OCR text provided");
-    return null; // Return null for empty text instead of throwing
+    return null;
   }
 
   try {
-    // For large files (>3MB), upload directly to Supabase Storage first
-    // This bypasses Vercel's 4.5MB request body limit
     let fileData: string | undefined;
     let fileUrl: string | undefined;
     let fileName: string | undefined;
 
     if (file && userId) {
-      fileName = file.name;
-      
-      // Upload to Supabase Storage first (all files)
-      console.log("📤 Uploading COG file to Supabase Storage...");
-      try {
-        const { uploadFileToSupabase } = await import(
-          "@/lib/utils/file-upload"
-        );
-        const storagePath = await uploadFileToSupabase(
-          file,
-          userId,
-          undefined,
-          "cog"
-        );
-        fileUrl = storagePath;
-        console.log("✅ COG file uploaded to Supabase:", fileUrl);
-      } catch (uploadError) {
-        const errorMessage =
-          uploadError instanceof Error
-            ? uploadError.message
-            : String(uploadError);
-        console.warn(
-          "⚠️ Supabase upload failed, falling back to base64:",
-          errorMessage
-        );
-
-        // Fall back to base64
-        console.log("📦 Converting COG file to base64...");
-        fileData = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-        console.log("✅ COG converted to base64 (fallback)");
-      }
+      const uploaded = await uploadAndGetUrl(file, userId, "cog");
+      fileData = uploaded.fileData;
+      fileUrl = uploaded.fileUrl;
+      fileName = uploaded.fileName;
     }
 
-    let response: Response;
-    try {
-      response = await fetch("/api/extract/cog", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ocrText,
-          fileData,
-          fileUrl,
-          fileName,
-          userId,
-          applicantName,
-        }),
-      });
-    } catch (fetchError) {
-      if (fetchError instanceof Error) {
-        console.error("extractCOGData: Network error:", fetchError.message);
-        throw new Error(
-          "Network error. Please check your internet connection and try again."
-        );
-      }
+    const response = await fetch("/api/extract/cog", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ocrText, fileData, fileUrl, fileName, userId, applicantName }),
+    });
 
-      throw new Error(
-        "An unknown error occurred while connecting to the server."
-      );
-    }
-
-    // Handle non-OK responses
     if (!response.ok) {
-      const statusCode = response.status;
-      let errorData: { error?: string; details?: string } = {};
-
+      let errorData: { error?: string } = {};
       try {
         errorData = await response.json();
       } catch {
-        console.error("extractCOGData: Could not parse error response");
+        // ignore parse failure
       }
-
-      const errorMessage = errorData.error || "Failed to extract COG data";
-
-      console.error(
-        `extractCOGData: API request failed with status ${statusCode}:`,
-        errorMessage
-      );
-
-      // Provide specific error messages based on status code
-      if (statusCode === 400) {
-        throw new Error(
-          errorMessage || "Invalid request. Please check the uploaded document."
-        );
-      } else if (statusCode === 401 || statusCode === 403) {
-        throw new Error("Authentication error. Please try again.");
-      } else if (statusCode === 404) {
-        throw new Error(
-          "Extraction service not found. Please contact support."
-        );
-      } else if (statusCode === 503) {
-        throw new Error(
-          errorMessage ||
-            "Extraction service is temporarily unavailable. Please try again later."
-        );
-      } else if (statusCode === 504) {
-        throw new Error(
-          "Request timed out. The document may be too complex to process."
-        );
-      } else if (statusCode >= 500) {
-        throw new Error(
-          "Server error occurred. Please try again in a few moments."
-        );
-      }
-
-      throw new Error(errorMessage);
+      handleApiError(response.status, errorData.error || "Failed to extract COG data");
     }
 
-    // Parse response data
-    let data: COGExtractionResponse;
-    try {
-      data = (await response.json()) as COGExtractionResponse;
-    } catch (jsonError) {
-      console.error(
-        "extractCOGData: Failed to parse response JSON:",
-        jsonError
-      );
-      throw new Error(
-        "Invalid response from server. Please try uploading your document again."
-      );
-    }
+    const data = (await response.json()) as COGExtractionResponse;
 
-    // Validate response structure
     if (!data || typeof data !== "object") {
-      console.error("extractCOGData: Invalid data structure received:", data);
       throw new Error("Invalid data format received from server.");
     }
 
-    // Check if we got any useful data
     const hasData = Object.values(data).some(
       (value) => value !== null && value !== undefined && value !== ""
     );
 
-    if (!hasData) {
-      console.warn("extractCOGData: No data could be extracted from document");
-      return null; // Return null instead of throwing for no data extracted
-    }
-
-    console.log("extractCOGData: Successfully extracted COG data");
-    return data;
+    return hasData ? data : null;
   } catch (error) {
-    // Re-throw errors that we've already formatted
-    if (error instanceof Error) {
-      throw error;
-    }
-
-    // Catch-all for unexpected errors
-    console.error("extractCOGData: Unexpected error:", error);
+    if (error instanceof Error) throw error;
     throw new Error(
       "An unexpected error occurred while extracting data from your document."
     );
   }
 }
 
-/**
- * Send OCR text to backend API for Certificate of Registration extraction
- * Returns structured COR data or throws an error
- */
 export async function extractCORData(
   ocrText: string,
   file?: File,
   userId?: string,
   applicantName?: string
 ): Promise<CORExtractionResponse | null> {
-  // Validate input
   if (!ocrText || typeof ocrText !== "string") {
-    console.error("extractCORData: Invalid OCR text provided");
     throw new Error("Invalid OCR text");
   }
 
   if (ocrText.trim().length === 0) {
-    console.warn("extractCORData: Empty OCR text provided");
-    return null; // Return null for empty text instead of throwing
+    return null;
   }
 
   try {
-    // For large files (>3MB), upload directly to Supabase Storage first
-    // This bypasses Vercel's 4.5MB request body limit
     let fileData: string | undefined;
     let fileUrl: string | undefined;
     let fileName: string | undefined;
 
     if (file && userId) {
-      fileName = file.name;
-      
-      // Upload to Supabase Storage first (all files)
-      console.log("📤 Uploading COR file to Supabase Storage...");
-      try {
-        const { uploadFileToSupabase } = await import(
-          "@/lib/utils/file-upload"
-        );
-        const storagePath = await uploadFileToSupabase(
-          file,
-          userId,
-          undefined,
-          "cor"
-        );
-        fileUrl = storagePath;
-        console.log("✅ COR file uploaded to Supabase:", fileUrl);
-      } catch (uploadError) {
-        const errorMessage =
-          uploadError instanceof Error
-            ? uploadError.message
-            : String(uploadError);
-        console.warn(
-          "⚠️ Supabase upload failed, falling back to base64:",
-          errorMessage
-        );
-
-        // Fall back to base64
-        console.log("📦 Converting COR file to base64...");
-        fileData = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-        console.log("✅ COR converted to base64 (fallback)");
-      }
+      const uploaded = await uploadAndGetUrl(file, userId, "cor");
+      fileData = uploaded.fileData;
+      fileUrl = uploaded.fileUrl;
+      fileName = uploaded.fileName;
     }
 
-    // Call our API route which handles JWT signing and webhook communication.
-    // Timeout temporarily disabled to avoid premature failures.
-    let response: Response;
-    try {
-      response = await fetch("/api/extract/cor", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ocrText,
-          fileData,
-          fileUrl,
-          fileName,
-          userId,
-          applicantName,
-        }),
-      });
-    } catch (fetchError) {
-      if (fetchError instanceof Error) {
-        console.error("extractCORData: Network error:", fetchError.message);
-        throw new Error(
-          "Network error. Please check your internet connection and try again."
-        );
-      }
+    const response = await fetch("/api/extract/cor", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ocrText, fileData, fileUrl, fileName, userId, applicantName }),
+    });
 
-      throw new Error(
-        "An unknown error occurred while connecting to the server."
-      );
-    }
-
-    // Handle non-OK responses
     if (!response.ok) {
-      const statusCode = response.status;
-      let errorData: { error?: string; details?: string } = {};
-
+      let errorData: { error?: string } = {};
       try {
         errorData = await response.json();
       } catch {
-        console.error("extractCORData: Could not parse error response");
+        // ignore parse failure
       }
-
-      const errorMessage = errorData.error || "Failed to extract COR data";
-
-      console.error(
-        `extractCORData: API request failed with status ${statusCode}:`,
-        errorMessage
-      );
-
-      // Provide specific error messages based on status code
-      if (statusCode === 400) {
-        throw new Error(
-          errorMessage || "Invalid request. Please check the uploaded document."
-        );
-      } else if (statusCode === 401 || statusCode === 403) {
-        throw new Error("Authentication error. Please try again.");
-      } else if (statusCode === 404) {
-        throw new Error(
-          "Extraction service not found. Please contact support."
-        );
-      } else if (statusCode === 503) {
-        throw new Error(
-          errorMessage ||
-            "Extraction service is temporarily unavailable. Please try again later."
-        );
-      } else if (statusCode === 504) {
-        throw new Error(
-          "Request timed out. The document may be too complex to process."
-        );
-      } else if (statusCode >= 500) {
-        throw new Error(
-          "Server error occurred. Please try again in a few moments."
-        );
-      }
-
-      throw new Error(errorMessage);
+      handleApiError(response.status, errorData.error || "Failed to extract COR data");
     }
 
-    // Parse response data
-    let data: CORExtractionResponse;
-    try {
-      data = (await response.json()) as CORExtractionResponse;
-    } catch (jsonError) {
-      console.error(
-        "extractCORData: Failed to parse response JSON:",
-        jsonError
-      );
-      throw new Error(
-        "Invalid response from server. Please try uploading your document again."
-      );
-    }
+    const data = (await response.json()) as CORExtractionResponse;
 
-    // Validate response structure
     if (!data || typeof data !== "object") {
-      console.error("extractCORData: Invalid data structure received:", data);
       throw new Error("Invalid data format received from server.");
     }
 
-    // Check if we got any useful data
     const hasData = Object.values(data).some(
       (value) => value !== null && value !== undefined && value !== ""
     );
 
-    if (!hasData) {
-      console.warn("extractCORData: No data could be extracted from document");
-      return null; // Return null instead of throwing for no data extracted
-    }
-
-    console.log("extractCORData: Successfully extracted COR data");
-    return data;
+    return hasData ? data : null;
   } catch (error) {
-    // Re-throw errors that we've already formatted
-    if (error instanceof Error) {
-      throw error;
-    }
-
-    // Catch-all for unexpected errors
-    console.error("extractCORData: Unexpected error:", error);
+    if (error instanceof Error) throw error;
     throw new Error(
       "An unexpected error occurred while extracting data from your document."
     );
