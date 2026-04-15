@@ -1,7 +1,6 @@
 "use client";
 
 import NextImage from "next/image";
-import { AppBackground } from "@/components/common/app-background";
 import type { LandingFooterProps } from "@/types/components";
 
 export function LandingFooter({}: LandingFooterProps): React.JSX.Element {

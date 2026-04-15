@@ -306,7 +306,6 @@ export default function ManualApplicationPage() {
         );
       }
 
-      let idUrl = null;
       let corUrl = null;
       let cogUrl = null;
 
@@ -338,7 +337,7 @@ export default function ManualApplicationPage() {
         toast.info("Uploading documents...");
 
         if (uploadedFiles.id) {
-          idUrl = await uploadFile(uploadedFiles.id, "id");
+          await uploadFile(uploadedFiles.id, "id");
         }
         if (uploadedFiles.cor) {
           corUrl = await uploadFile(uploadedFiles.cor, "cor");

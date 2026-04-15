@@ -31,7 +31,7 @@ The repository follows a monolithic structure (`app/`, `components/`, `lib/`) to
 | Authentication & Authorization | Supabase Auth, JSON Web Tokens (JWT) for session validation             |
 | Database & Persistence         | Supabase PostgreSQL with RLS policies                                   |
 | Document Intelligence          | Tesseract OCR (text extraction), PDF.js (viewer/processing)             |
-| AI Assistance                  | Google Gemini Flash 2.5 (document text cleanup and structured extraction) |
+| AI Assistance                  | Google Gemini Flash (primary), Groq Llama 3.3 70B (fallback) for document extraction |
 | Email                          | Nodemailer (SMTP)                                                       |
 | Blockchain                     | Polygon Amoy Testnet (ethers.js)                                        |
 | Reporting & Assets             | @react-pdf/renderer, ExcelJS                                            |
@@ -46,7 +46,13 @@ NEXT_PUBLIC_SUPABASE_URL=<project-url>
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
 SUPABASE_SERVICE_ROLE_KEY=<service-role>
 JWT_SECRET=<strong-random-secret-min-32-chars>
-GEMINI_API_KEY=<google-ai-api-key>
+GEMINI_API_KEY_ID=<google-ai-api-key-for-id>
+GEMINI_API_KEY_COR=<google-ai-api-key-for-cor>
+GEMINI_API_KEY_COG=<google-ai-api-key-for-cog>
+GEMINI_MODEL_ID=gemini-flash-latest
+GEMINI_MODEL_COR=gemini-flash-latest
+GEMINI_MODEL_COG=gemini-flash-latest
+GROQ_API_KEY=<groq-api-key>            # Free fallback: https://console.groq.com/keys
 SMTP_HOST=<smtp-server>
 SMTP_PORT=587
 SMTP_USER=<email-address>

@@ -57,7 +57,7 @@ const imageToBase64 = async (url: string): Promise<string> => {
 
 export function PrintPersonalInfo({
   personalInfo,
-  userEmail,
+  userEmail: _userEmail,
 }: PrintPersonalInfoProps) {
   const [iskolarblockLogo, setIskolarblockLogo] = useState<string>("");
   const [skLogo, setSkLogo] = useState<string>("");
@@ -106,16 +106,6 @@ export function PrintPersonalInfo({
     ]
       .filter(Boolean)
       .join(" ");
-
-    const address = [
-      personalInfo.houseNumber,
-      personalInfo.purok,
-      personalInfo.barangay,
-      personalInfo.municipality,
-      personalInfo.province,
-    ]
-      .filter(Boolean)
-      .join(", ");
 
     const logoHtml =
       iskolarblockLogo || skLogo

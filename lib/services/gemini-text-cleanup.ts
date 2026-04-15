@@ -1,12 +1,51 @@
-import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+import {
+  GoogleGenerativeAI,
+  SchemaType,
+  type GenerateContentResult,
+  type GenerativeModel,
+  type GenerateContentRequest,
+  type Schema,
+} from "@google/generative-ai";
 import { z } from "zod";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 2_000;
 
-const model = genAI.getGenerativeModel({
-  model: "gemini-2.5-flash-preview-05-20",
-  generationConfig: { responseMimeType: "application/json" },
-});
+function getModel(apiKey: string, modelName: string) {
+  const genAI = new GoogleGenerativeAI(apiKey);
+  return genAI.getGenerativeModel({
+    model: modelName,
+    generationConfig: { responseMimeType: "application/json" },
+  });
+}
+
+async function generateWithRetry(
+  model: GenerativeModel,
+  request: GenerateContentRequest,
+): Promise<GenerateContentResult> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      return await model.generateContent(request);
+    } catch (err: unknown) {
+      lastError = err;
+      const status = (err as { status?: number }).status;
+      const msg = err instanceof Error ? err.message : String(err);
+
+      // If the quota limit is literally 0, retrying won't help
+      if (status === 429 && msg.includes("limit: 0")) throw err;
+
+      // Retry only on 429 (rate-limit) or 503 (overloaded)
+      if ((status === 429 || status === 503) && attempt < MAX_RETRIES) {
+        const delay = BASE_DELAY_MS * 2 ** attempt;
+        await new Promise((r) => setTimeout(r, delay));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastError;
+}
 
 // ---------------------------------------------------------------------------
 // Zod schemas for validated output
@@ -68,7 +107,7 @@ export type COGFields = z.infer<typeof COGFieldsSchema>;
 // Gemini JSON Schema definitions (mirrors the Zod schemas for the model)
 // ---------------------------------------------------------------------------
 
-const idResponseSchema = {
+const idResponseSchema: Schema = {
   type: SchemaType.OBJECT,
   properties: {
     Id: { type: SchemaType.BOOLEAN },
@@ -104,7 +143,7 @@ const idResponseSchema = {
   ],
 };
 
-const corResponseSchema = {
+const corResponseSchema: Schema = {
   type: SchemaType.OBJECT,
   properties: {
     "Certificate of Registration": { type: SchemaType.BOOLEAN },
@@ -128,7 +167,7 @@ const corResponseSchema = {
   ],
 };
 
-const cogResponseSchema = {
+const cogResponseSchema: Schema = {
   type: SchemaType.OBJECT,
   properties: {
     "Certificate of Grades": { type: SchemaType.BOOLEAN },
@@ -253,7 +292,13 @@ ${ocrText}
 // ---------------------------------------------------------------------------
 
 export async function extractIdWithGemini(ocrText: string): Promise<IdFields> {
-  const result = await model.generateContent({
+  const apiKey = process.env.GEMINI_API_KEY_ID;
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY_ID is not configured");
+  }
+  const modelName = process.env.GEMINI_MODEL_ID || "gemini-flash-latest";
+  const model = getModel(apiKey, modelName);
+  const result = await generateWithRetry(model, {
     contents: [{ role: "user", parts: [{ text: idPrompt(ocrText) }] }],
     generationConfig: {
       responseMimeType: "application/json",
@@ -269,7 +314,13 @@ export async function extractCorWithGemini(
   ocrText: string,
   applicantName?: string
 ): Promise<CORFields> {
-  const result = await model.generateContent({
+  const apiKey = process.env.GEMINI_API_KEY_COR;
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY_COR is not configured");
+  }
+  const modelName = process.env.GEMINI_MODEL_COR || "gemini-flash-latest";
+  const model = getModel(apiKey, modelName);
+  const result = await generateWithRetry(model, {
     contents: [
       { role: "user", parts: [{ text: corPrompt(ocrText, applicantName) }] },
     ],
@@ -287,7 +338,13 @@ export async function extractCogWithGemini(
   ocrText: string,
   applicantName?: string
 ): Promise<COGFields> {
-  const result = await model.generateContent({
+  const apiKey = process.env.GEMINI_API_KEY_COG;
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY_COG is not configured");
+  }
+  const modelName = process.env.GEMINI_MODEL_COG || "gemini-flash-latest";
+  const model = getModel(apiKey, modelName);
+  const result = await generateWithRetry(model, {
     contents: [
       { role: "user", parts: [{ text: cogPrompt(ocrText, applicantName) }] },
     ],

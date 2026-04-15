@@ -518,10 +518,10 @@ export default function CompleteApplicationPage() {
                 setProcessedCogFile={setProcessedCogFile}
                 processedCorFile={processedCorFile}
                 setProcessedCorFile={setProcessedCorFile}
-                onCogOcrChange={(text, data) => {
+                onCogOcrChange={(_text, data) => {
                   setCogExtractedData(data);
                 }}
-                onCorOcrChange={(text, data) => {
+                onCorOcrChange={(_text, data) => {
                   setCorExtractedData(data);
                 }}
                 existingCogFileUrl={existingCogDocument?.fileUrl || null}

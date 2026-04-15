@@ -90,11 +90,11 @@ export default function NewApplicationPage() {
   const [cogOcrText, setCogOcrText] = useState<string>("");
   const [cogExtractedData, setCogExtractedData] =
     useState<COGExtractionResponse | null>(null);
-  const [cogFileUrl, setCogFileUrl] = useState<string>("");
+  const [_cogFileUrl, setCogFileUrl] = useState<string>("");
   const [corOcrText, setCorOcrText] = useState<string>("");
   const [corExtractedData, setCorExtractedData] =
     useState<CORExtractionResponse | null>(null);
-  const [corFileUrl, setCorFileUrl] = useState<string>("");
+  const [_corFileUrl, setCorFileUrl] = useState<string>("");
   const [submittedApplicationId, setSubmittedApplicationId] = useState<
     string | null
   >(null);

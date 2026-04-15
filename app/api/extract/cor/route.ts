@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
-import { extractCorWithGemini } from "@/lib/services/gemini-text-cleanup";
+import { extractCor } from "@/lib/services/extraction-with-fallback";
 
 export interface CORExtractionResponse {
   "Certificate of Registration": boolean;
@@ -19,6 +19,7 @@ interface RequestBody {
   fileName?: string;
   userId?: string;
   applicantName?: string | null;
+  ocrConfidence?: number;
 }
 
 export async function POST(request: NextRequest) {
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { ocrText, fileData, fileUrl, fileName, userId, applicantName } =
+    const { ocrText, fileData, fileUrl, fileName, userId, applicantName, ocrConfidence } =
       body;
 
     let finalFileUrl: string | null = fileUrl || null;
@@ -86,14 +87,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!process.env.GEMINI_API_KEY) {
+    if (!process.env.GEMINI_API_KEY_COR && !process.env.GROQ_API_KEY) {
       return NextResponse.json(
         { error: "COR extraction service not configured" },
         { status: 503 }
       );
     }
 
-    const fields = await extractCorWithGemini(
+    const { data: fields, provider } = await extractCor(
       ocrText,
       applicantName ?? undefined
     );
@@ -128,11 +129,27 @@ export async function POST(request: NextRequest) {
       total_units: fields.total_units,
     };
 
-    return NextResponse.json({ ...data, fileUrl: finalFileUrl });
+    return NextResponse.json({
+      ...data,
+      fileUrl: finalFileUrl,
+      ocrConfidence: typeof ocrConfidence === "number" ? Math.round(ocrConfidence) : undefined,
+      provider,
+    });
   } catch (error) {
     console.error("Unexpected error in extract-cor API:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
+    const anyErr = error as unknown as { status?: number; statusText?: string };
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+    if (anyErr?.status === 429 || errorMessage.includes("429 Too Many Requests")) {
+      return NextResponse.json(
+        {
+          error: "AI extraction quota exceeded",
+          details:
+            "All configured AI providers are out of quota. Check Gemini billing or add a GROQ_API_KEY fallback.",
+        },
+        { status: 429 }
+      );
+    }
     return NextResponse.json(
       {
         error: "An unexpected error occurred while processing your request",

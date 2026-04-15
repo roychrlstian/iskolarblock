@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["rimraf", "fstream"],
+  serverExternalPackages: [],
   // Increase body size limit for file uploads (COG/COR documents)
   experimental: {
     serverActions: {

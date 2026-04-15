@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  extractIdWithGemini,
-  type IdFields,
-} from "@/lib/services/gemini-text-cleanup";
+import { extractId } from "@/lib/services/extraction-with-fallback";
+import type { IdFields } from "@/lib/services/gemini-text-cleanup";
 
 export interface IDExtractionResponse {
   last_name: string | null;
@@ -22,6 +20,7 @@ export interface IDExtractionResponse {
 
 interface RequestBody {
   ocrText: string;
+  ocrConfidence?: number;
 }
 
 function toResponse(fields: IdFields): IDExtractionResponse {
@@ -54,7 +53,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { ocrText } = body;
+    const { ocrText, ocrConfidence } = body;
 
     if (!ocrText || typeof ocrText !== "string") {
       return NextResponse.json(
@@ -77,14 +76,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!process.env.GEMINI_API_KEY) {
+    if (!process.env.GEMINI_API_KEY_ID && !process.env.GROQ_API_KEY) {
       return NextResponse.json(
         { error: "Extraction service not configured" },
         { status: 503 }
       );
     }
 
-    const fields = await extractIdWithGemini(ocrText);
+    const { data: fields, provider } = await extractId(ocrText);
 
     if (!fields.Id) {
       return NextResponse.json(
@@ -96,11 +95,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json(toResponse(fields));
+    return NextResponse.json({
+      ...toResponse(fields),
+      ocrConfidence: typeof ocrConfidence === "number" ? Math.round(ocrConfidence) : undefined,
+      provider,
+    });
   } catch (error) {
     console.error("Unexpected error in extract-id API:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
+    const anyErr = error as unknown as { status?: number; statusText?: string };
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+    if (anyErr?.status === 429 || errorMessage.includes("429 Too Many Requests")) {
+      return NextResponse.json(
+        {
+          error: "AI extraction quota exceeded",
+          details:
+            "All configured AI providers are out of quota. Check Gemini billing or add a GROQ_API_KEY fallback.",
+        },
+        { status: 429 }
+      );
+    }
     return NextResponse.json(
       {
         error: "An unexpected error occurred while processing your request",

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { calculateBudgetRecommendation } from "@/lib/utils/budget-recommendation";
 import {
@@ -73,27 +73,7 @@ export function useDashboardData(
   const [isLoading, setIsLoading] = useState(true);
   const [totalApplicants, setTotalApplicants] = useState(0);
 
-  useEffect(() => {
-    if (selectedPeriodId || periods.length === 0) {
-      void fetchDashboardData();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPeriodId, timeFilter, educationLevelFilter, periods]);
-
-  // Listen for refresh events from edit dialog
-  useEffect(() => {
-    const handleRefresh = () => {
-      void fetchDashboardData();
-    };
-
-    window.addEventListener("refreshDashboard", handleRefresh);
-    return () => {
-      window.removeEventListener("refreshDashboard", handleRefresh);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPeriodId]);
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       const supabase = getSupabaseBrowserClient();
 
@@ -335,7 +315,24 @@ export function useDashboardData(
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedPeriodId, timeFilter, educationLevelFilter, periods]);
+
+  useEffect(() => {
+    if (selectedPeriodId || periods.length === 0) {
+      void fetchDashboardData();
+    }
+  }, [fetchDashboardData, selectedPeriodId, periods.length]);
+
+  useEffect(() => {
+    const handleRefresh = () => {
+      void fetchDashboardData();
+    };
+
+    window.addEventListener("refreshDashboard", handleRefresh);
+    return () => {
+      window.removeEventListener("refreshDashboard", handleRefresh);
+    };
+  }, [fetchDashboardData]);
 
   return {
     stats,

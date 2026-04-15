@@ -10,6 +10,7 @@ export interface OCRProgress {
 
 export interface OCRResult {
   text: string;
+  confidence: number;
   error?: string;
 }
 
@@ -34,8 +35,11 @@ export async function extractTextFromImage(
           }
         },
       })
-        .then((res: { data?: { text?: string } }) => {
-          resolve({ text: res?.data?.text ?? "" });
+        .then((res: { data?: { text?: string; confidence?: number } }) => {
+          resolve({
+            text: res?.data?.text ?? "",
+            confidence: res?.data?.confidence ?? 0,
+          });
         })
         .catch((err) => {
           reject(err);
@@ -43,7 +47,7 @@ export async function extractTextFromImage(
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to process image";
-    return { text: "", error: message };
+    return { text: "", confidence: 0, error: message };
   }
 }
 
@@ -68,6 +72,7 @@ export async function extractTextFromPDF(
     const pdf = await loadingTask.promise;
 
     let combinedText = "";
+    const pageConfidences: number[] = [];
 
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
       const page = await pdf.getPage(pageNum);
@@ -85,7 +90,7 @@ export async function extractTextFromPDF(
       await page.render({ canvasContext: ctx, viewport }).promise;
 
       // OCR the canvas
-      const pageText = await new Promise<string>((resolve, reject) => {
+      const pageResult = await new Promise<{ text: string; confidence: number }>((resolve, reject) => {
         Tesseract.recognize(canvas, "eng", {
           logger: (m: { status?: string; progress?: number }) => {
             if (m?.status === "recognizing text" && typeof m.progress === "number") {
@@ -98,19 +103,28 @@ export async function extractTextFromPDF(
             }
           },
         })
-          .then((res: { data?: { text?: string } }) => {
-            resolve(res?.data?.text ?? "");
+          .then((res: { data?: { text?: string; confidence?: number } }) => {
+            resolve({
+              text: res?.data?.text ?? "",
+              confidence: res?.data?.confidence ?? 0,
+            });
           })
           .catch(reject);
       });
 
-      combinedText += pageText + "\n";
+      combinedText += pageResult.text + "\n";
+      pageConfidences.push(pageResult.confidence);
     }
 
-    return { text: combinedText.trim() };
+    const avgConfidence =
+      pageConfidences.length > 0
+        ? pageConfidences.reduce((a, b) => a + b, 0) / pageConfidences.length
+        : 0;
+
+    return { text: combinedText.trim(), confidence: Math.round(avgConfidence) };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to process PDF";
-    return { text: "", error: message };
+    return { text: "", confidence: 0, error: message };
   }
 }
 
@@ -131,6 +145,7 @@ export async function extractText(
   } else {
     return {
       text: "",
+      confidence: 0,
       error: "Unsupported file type. Please upload an image or PDF.",
     };
   }

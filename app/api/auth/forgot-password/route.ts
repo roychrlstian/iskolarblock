@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     }
 
     const supabase = getSupabaseServerClient();
-    const { data, error } = await supabase.auth.signInWithOtp({
+    const { error } = await supabase.auth.signInWithOtp({
       email: email.trim().toLowerCase(),
       options: { shouldCreateUser: false },
     });

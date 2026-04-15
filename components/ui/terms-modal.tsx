@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import {
   Dialog,
   DialogContent,
@@ -171,7 +170,7 @@ export function TermsModal({ isOpen, onDecline }: TermsModalProps) {
               </h3>
               <p>
                 Questions about the Terms should be sent to us at
-                support@iskolarblock.app.
+                iskolarblock@gmail.com.
               </p>
             </section>
           </div>

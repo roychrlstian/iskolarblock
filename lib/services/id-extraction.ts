@@ -12,6 +12,8 @@ export interface IDExtractionResponse {
   religion: string | null;
   course_or_strand: string | null;
   year_level: string | null;
+  ocrConfidence?: number;
+  provider?: string;
 }
 
 export interface IDExtractionError {
@@ -21,7 +23,8 @@ export interface IDExtractionError {
 }
 
 export async function extractIDData(
-  ocrText: string
+  ocrText: string,
+  ocrConfidence?: number
 ): Promise<IDExtractionResponse | null> {
   if (!ocrText || typeof ocrText !== "string") {
     throw new Error("Invalid OCR text");
@@ -35,7 +38,7 @@ export async function extractIDData(
     const response = await fetch("/api/extract/id", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ocrText }),
+      body: JSON.stringify({ ocrText, ocrConfidence }),
     });
 
     if (!response.ok) {

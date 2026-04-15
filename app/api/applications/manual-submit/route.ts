@@ -4,7 +4,6 @@ import { randomUUID } from "crypto";
 import { logApplicationToBlockchain } from "@/lib/services/blockchain";
 import { logEvent } from "@/lib/services/log-events";
 import { sendEmailNotification } from "@/lib/services/email-notification";
-import { getDocumentRemarks } from "@/lib/utils/application-remarks";
 import { getCurrentTimePH } from "@/lib/utils/date-formatting";
 
 export async function POST(request: NextRequest) {

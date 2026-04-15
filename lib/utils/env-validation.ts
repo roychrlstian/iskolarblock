@@ -25,9 +25,19 @@ export function validateEnvironmentVariables(): EnvValidationResult {
     errors.push("NEXT_PUBLIC_SUPABASE_ANON_KEY is not configured");
   }
 
-  if (!process.env.GEMINI_API_KEY) {
+  if (
+    !process.env.GEMINI_API_KEY_ID ||
+    !process.env.GEMINI_API_KEY_COR ||
+    !process.env.GEMINI_API_KEY_COG
+  ) {
     console.warn(
-      "GEMINI_API_KEY is not configured - document extraction will not work"
+      "Gemini API keys are not fully configured (GEMINI_API_KEY_ID/GEMINI_API_KEY_COR/GEMINI_API_KEY_COG) - document extraction will not work"
+    );
+  }
+
+  if (!process.env.GROQ_API_KEY) {
+    console.warn(
+      "GROQ_API_KEY is not configured - Groq fallback for document extraction will be unavailable"
     );
   }
 

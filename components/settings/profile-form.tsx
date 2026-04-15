@@ -15,7 +15,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { User, Mail, Phone, MapPin, Edit, Save } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 interface ProfileFormData {
   name: string;

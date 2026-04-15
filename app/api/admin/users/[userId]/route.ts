@@ -146,7 +146,7 @@ export async function PATCH(
 // DELETE /api/admin/users/[userId]
 // Delete a user (admin only)
 export async function DELETE(
-  req: Request,
+  _req: Request,
   { params }: { params: Promise<{ userId: string }> | { userId: string } }
 ) {
   try {

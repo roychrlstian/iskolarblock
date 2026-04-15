@@ -9,6 +9,8 @@ export interface COGExtractionResponse {
   total_units: number | null;
   subjects: GradeSubject[] | null;
   fileUrl?: string | null;
+  ocrConfidence?: number;
+  provider?: string;
 }
 
 export interface GradeSubject {
@@ -27,6 +29,8 @@ export interface CORExtractionResponse {
   name: string | null;
   total_units: number | null;
   fileUrl?: string | null;
+  ocrConfidence?: number;
+  provider?: string;
 }
 
 export interface DocumentExtractionError {
@@ -87,7 +91,8 @@ export async function extractCOGData(
   ocrText: string,
   file?: File,
   userId?: string,
-  applicantName?: string
+  applicantName?: string,
+  ocrConfidence?: number
 ): Promise<COGExtractionResponse | null> {
   if (!ocrText || typeof ocrText !== "string") {
     throw new Error("Invalid OCR text");
@@ -112,7 +117,7 @@ export async function extractCOGData(
     const response = await fetch("/api/extract/cog", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ocrText, fileData, fileUrl, fileName, userId, applicantName }),
+      body: JSON.stringify({ ocrText, fileData, fileUrl, fileName, userId, applicantName, ocrConfidence }),
     });
 
     if (!response.ok) {
@@ -148,7 +153,8 @@ export async function extractCORData(
   ocrText: string,
   file?: File,
   userId?: string,
-  applicantName?: string
+  applicantName?: string,
+  ocrConfidence?: number
 ): Promise<CORExtractionResponse | null> {
   if (!ocrText || typeof ocrText !== "string") {
     throw new Error("Invalid OCR text");
@@ -173,7 +179,7 @@ export async function extractCORData(
     const response = await fetch("/api/extract/cor", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ocrText, fileData, fileUrl, fileName, userId, applicantName }),
+      body: JSON.stringify({ ocrText, fileData, fileUrl, fileName, userId, applicantName, ocrConfidence }),
     });
 
     if (!response.ok) {

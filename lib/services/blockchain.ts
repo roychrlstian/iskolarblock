@@ -2,8 +2,6 @@ import { JsonRpcProvider, Wallet, keccak256, toUtf8Bytes } from "ethers";
 import { getCurrentTimePH } from "@/lib/utils/date-formatting";
 
 const POLYGON_AMOY_CHAIN_ID = 80002;
-const POLYGON_AMOY_RPC_URL =
-  process.env.POLYGON_AMOY_RPC_URL || "https://rpc-amoy.polygon.technology";
 
 const POLYGON_AMOY_FALLBACK_RPCS = [
   "https://rpc-amoy.polygon.technology",
