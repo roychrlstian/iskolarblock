@@ -37,7 +37,7 @@ interface PersonalInfoSummary {
 
 interface ApplicationSummary {
   id: string;
-  status: "PENDING" | "APPROVED" | "REJECTED" | "GRANTED";
+  status: "PENDING" | "APPROVED" | "REJECTED" | "PENDING_GRANT" | "GRANTED";
   applicationType: string;
   CertificateOfGrades?: ExistingCertificate[];
   CertificateOfRegistration?: ExistingCertificate[];

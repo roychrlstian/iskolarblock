@@ -2,7 +2,7 @@ import nodemailer from "nodemailer";
 import { readFileSync } from "fs";
 import { join } from "path";
 
-type EmailStatus = "PENDING" | "APPROVED" | "REJECTED" | "GRANTED";
+type EmailStatus = "PENDING" | "APPROVED" | "REJECTED" | "PENDING_GRANT" | "GRANTED";
 
 interface SendEmailParams {
   applicantName: string;
@@ -18,6 +18,7 @@ const SUBJECT_MAP: Record<EmailStatus, string> = {
   PENDING: "Application Received — Under Review",
   APPROVED: "Application Approved!",
   REJECTED: "Application Status Update",
+  PENDING_GRANT: "Action Required: Confirm Your Scholarship Grant",
   GRANTED: "Scholarship Granted!",
 };
 
@@ -25,6 +26,7 @@ const TEMPLATE_MAP: Record<EmailStatus, string> = {
   PENDING: "pending.html",
   APPROVED: "approved.html",
   REJECTED: "rejected.html",
+  PENDING_GRANT: "pending-grant.html",
   GRANTED: "granted.html",
 };
 

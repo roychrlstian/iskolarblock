@@ -181,6 +181,9 @@ export function useDashboardData(
       const filteredRejectedCount =
         filteredApplications.filter((app) => app.status === "REJECTED")
           .length || 0;
+      const filteredPendingGrantCount =
+        filteredApplications.filter((app) => app.status === "PENDING_GRANT")
+          .length || 0;
       const filteredGrantedCount =
         filteredApplications.filter((app) => app.status === "GRANTED").length ||
         0;
@@ -271,12 +274,9 @@ export function useDashboardData(
       setPieData([
         { name: "Approved", value: filteredApprovedCount, color: "#10b981" },
         { name: "Pending", value: filteredPendingCount, color: "#f97316" },
+        { name: "Awaiting Confirm", value: filteredPendingGrantCount, color: "#6366f1" },
         { name: "Rejected", value: filteredRejectedCount, color: "#ef4444" },
-        {
-          name: "Granted",
-          value: filteredGrantedCount,
-          color: "#a855f7",
-        },
+        { name: "Granted", value: filteredGrantedCount, color: "#a855f7" },
       ]);
       setTotalApplicants(filteredTotalApplicants);
 

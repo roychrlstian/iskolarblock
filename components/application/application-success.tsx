@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { CheckCircle, Clock, Award, XCircle, Upload } from "lucide-react";
+import { CheckCircle, Clock, Award, XCircle, Upload, Handshake } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -46,6 +46,16 @@ const statusMeta: Record<
     description:
       "Your application is pending. Please upload remaining documents if needed.",
   },
+  PENDING_GRANT: {
+    badgeBg: "bg-indigo-50",
+    textColor: "text-indigo-700",
+    highlight: "text-indigo-600",
+    iconWrapper: "bg-indigo-500",
+    icon: Handshake,
+    title: "Scholarship Offered!",
+    description:
+      "You have been offered a scholarship grant. Please confirm or decline below.",
+  },
   GRANTED: {
     badgeBg: "bg-purple-50",
     textColor: "text-purple-700",
@@ -54,7 +64,7 @@ const statusMeta: Record<
     icon: Award,
     title: "Scholarship Granted!",
     description:
-      "You're scholarship has been granted. See you in the next semester!",
+      "Your scholarship has been granted. See you in the next semester!",
   },
   REJECTED: {
     badgeBg: "bg-red-50",
@@ -79,18 +89,17 @@ export function ApplicationSuccess({
   const statusLabel =
     status === "GRANTED"
       ? "Granted"
+      : status === "PENDING_GRANT"
+      ? "Awaiting Confirmation"
       : status === "APPROVED"
       ? "Approved"
       : status === "REJECTED"
       ? "Rejected"
       : "Pending";
 
-  // Generate fallback ID once using useState with lazy initializer
-  // This ensures Date.now() is only called once during component initialization
   const [fallbackId] = useState(() => `SCH-${Date.now()}`);
+  const [isConfirming, setIsConfirming] = useState(false);
 
-  // Check if remarks indicate incomplete documents
-  // Only show upload button if documents are actually missing/incomplete
   const hasIncompleteDocuments =
     remarks &&
     status === "PENDING" &&
@@ -100,6 +109,28 @@ export function ApplicationSuccess({
       remarks.toLowerCase().includes("upload") ||
       remarks.toLowerCase().includes("provide")) &&
     !remarks.toLowerCase().includes("complete");
+
+  const handleConfirmGrant = async (action: "accept" | "decline") => {
+    if (!applicationId || isConfirming) return;
+    setIsConfirming(true);
+    try {
+      const res = await fetch("/api/applications/confirm-grant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ applicationId, action }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error ?? "Request failed");
+      }
+      window.location.reload();
+    } catch (err) {
+      console.error("Confirm grant error:", err);
+      alert(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setIsConfirming(false);
+    }
+  };
 
   return (
     <motion.div
@@ -141,8 +172,43 @@ export function ApplicationSuccess({
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 sm:justify-center">
+          {status === "PENDING_GRANT" && applicationId && (
+            <div className="space-y-3">
+              <div className="flex flex-col sm:flex-row gap-3 sm:justify-center">
+                <Button
+                  onClick={() => handleConfirmGrant("accept")}
+                  disabled={isConfirming}
+                  className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white"
+                  size="lg"
+                >
+                  <Handshake className="w-4 h-4 mr-2" />
+                  {isConfirming ? "Processing…" : "Accept Scholarship"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => handleConfirmGrant("decline")}
+                  disabled={isConfirming}
+                  className="w-full sm:w-auto border-red-300 text-red-600 hover:bg-red-50"
+                  size="lg"
+                >
+                  Decline
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500">
+                You can also confirm from your{" "}
+                <span
+                  className="text-indigo-600 underline cursor-pointer"
+                  onClick={() => router.push("/history")}
+                >
+                  Application History
+                </span>
+              </p>
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 sm:justify-center pt-2">
             <Button
+              variant="outline"
               onClick={() => router.push("/user-dashboard")}
               className={
                 hasIncompleteDocuments && applicationId
@@ -154,7 +220,7 @@ export function ApplicationSuccess({
             </Button>
             <Button
               variant="outline"
-              onClick={() => (window.location.href = "/history")}
+              onClick={() => router.push("/history")}
               className={
                 hasIncompleteDocuments && applicationId
                   ? "w-full sm:flex-1"

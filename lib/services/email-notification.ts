@@ -6,7 +6,7 @@ interface SendEmailNotificationParams {
   applicantEmail: string;
   applicationId: string;
   applicationType: string;
-  status: "PENDING" | "APPROVED" | "REJECTED" | "GRANTED";
+  status: "PENDING" | "APPROVED" | "REJECTED" | "PENDING_GRANT" | "GRANTED";
   rejectionReason?: string;
   submissionDate?: string;
 }

@@ -1,10 +1,11 @@
 "use client";
 
-import { CheckCircle, Clock, Coins } from "lucide-react";
+import { CheckCircle, Clock, Coins, Handshake } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 interface AwardingStatsProps {
   pending: number;
+  pendingGrant?: number;
   granted: number;
   totalAmount: number;
 }
@@ -18,11 +19,12 @@ const currencyFormatter = new Intl.NumberFormat("en-PH", {
 
 export function AwardingStats({
   pending,
+  pendingGrant = 0,
   granted,
   totalAmount,
 }: AwardingStatsProps): React.JSX.Element {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
@@ -32,6 +34,19 @@ export function AwardingStats({
             </div>
             <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
               <Clock className="w-5 h-5 text-orange-600" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Awaiting Confirmation</p>
+              <p className="text-2xl font-bold text-indigo-600">{pendingGrant}</p>
+            </div>
+            <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+              <Handshake className="w-5 h-5 text-indigo-600" />
             </div>
           </div>
         </CardContent>

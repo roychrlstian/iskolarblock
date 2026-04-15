@@ -235,7 +235,7 @@ export interface ApplicationPeriodDialogProps {
 }
 
 // Awarding component types
-export type AwardingStatus = "APPROVED" | "GRANTED";
+export type AwardingStatus = "APPROVED" | "PENDING_GRANT" | "GRANTED";
 export type LevelFilter = "COLLEGE" | "SENIOR_HIGH";
 
 export interface AwardingApplication {
