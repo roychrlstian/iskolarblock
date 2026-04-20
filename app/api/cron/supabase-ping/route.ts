@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
         {
           error: "Supabase environment variables are missing",
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
           status: upstreamResponse.status,
           details: responseText,
         },
-        { status: 502 }
+        { status: 502 },
       );
     }
 
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
         error: "An unexpected error occurred",
         details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
