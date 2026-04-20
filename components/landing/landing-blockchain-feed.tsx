@@ -32,7 +32,7 @@ export function LandingBlockchainFeed({
     (process.env.NEXT_PUBLIC_BLOCKCHAIN_EXPLORER_URL ?? "").replace(
       /\/$/,
       ""
-    ) || "https://www.oklink.com/amoy/tx";
+    ) || "https://amoy.polygonscan.com/tx";
 
   const [searchTerm, setSearchTerm] = useState("");
   const filteredRecords = useMemo(() => {

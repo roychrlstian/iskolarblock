@@ -27,7 +27,7 @@ const BLOCKCHAIN_EXPLORER_BASE_URL =
   typeof process !== "undefined" &&
   process.env.NEXT_PUBLIC_BLOCKCHAIN_EXPLORER_URL
     ? process.env.NEXT_PUBLIC_BLOCKCHAIN_EXPLORER_URL
-    : "https://www.oklink.com/amoy/tx/";
+    : "https://amoy.polygonscan.com/tx/";
 
 function buildExplorerUrl(hash?: string | null) {
   if (!hash) return null;
