@@ -3,7 +3,7 @@ import { IMRaDPageClient } from "@/components/imrad/imrad-page-client";
 export const metadata = {
   title: "IMRaD - IskolarBlock",
   description:
-    "IMRaD (Introduction, Methods, Results, and Discussion) is a common structure for scientific papers. This page provides an overview of the IMRaD format and its components.",
+    "IMRaD-style research report on IskolarBlock, a blockchain-enabled scholarship platform, detailing the introduction, methods, results, and discussion of its design, implementation, evaluation, and key findings.",
 };
 
 // Static page with daily revalidation (FAQ content rarely changes)
