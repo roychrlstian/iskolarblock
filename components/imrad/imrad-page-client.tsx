@@ -1338,20 +1338,22 @@ const References = () => {
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%" }}>
                   {refButtons.map((b) => (
-                    <button
+                    <a
                       key={b.l}
+                      href="/Iskolarblock-IMRAD.pdf"
+                      download
                       style={{
                         display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                         padding: "12px 20px", borderRadius: 10, fontWeight: 700, fontSize: 14,
                         cursor: "pointer", background: "linear-gradient(135deg,#f97316,#ea580c)",
-                        color: "white", border: "none",
+                        color: "white", border: "none", textDecoration: "none",
                         boxShadow: "0 4px 16px rgba(249,115,22,0.3)", transition: "transform 0.2s",
                       }}
-                      onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "none"; }}
                     >
                       {b.i}{b.l}
-                    </button>
+                    </a>
                   ))}
                 </div>
               </Card>
